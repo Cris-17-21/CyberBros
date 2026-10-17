@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+.firebase/
+firebase-debug.log
+coverage/
+.DS_Store
+Thumbs.db
