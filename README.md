@@ -2,7 +2,7 @@
 
 Planificador de viajes multimodales para Lima. El producto compara combinaciones de transporte público, caminata y taxi puente según el presupuesto y los límites de caminata de cada viaje.
 
-## Arquitectura acordada
+## Alcance y arquitectura acordados`n`n- Cobertura objetivo: toda Lima; el límite geográfico exacto se fijará antes de afirmar cobertura completa. No es un producto para todo el Perú.`n`n## Arquitectura acordada
 
 - Cliente Flutter para Android y web.
 - Motor de planificación local en Dart puro.
@@ -28,4 +28,5 @@ El informe se guarda en `data/reports/osm-lima-coverage.json`. Los conteos sirve
 - [Requerimientos](cyberon-requerimientos.md)
 - [Arquitectura](cyberon-arquitectura.md)
 - [Diseño UX/UI](cyberon-diseno.md)
+
 
