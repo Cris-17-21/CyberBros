@@ -59,6 +59,12 @@ async function startBot() {
       if (!msg || msg.key.fromMe || !msg.message) return;
 
       const remoteJid = msg.key.remoteJid;
+
+      // Ignorar grupos (@g.us) y difusiones/estados (@broadcast)
+      if (!remoteJid || remoteJid.endsWith('@g.us') || remoteJid.endsWith('@broadcast')) {
+        return;
+      }
+
       const body =
         msg.message.conversation ||
         msg.message.extendedTextMessage?.text ||
