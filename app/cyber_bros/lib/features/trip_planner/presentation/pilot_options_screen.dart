@@ -7,7 +7,9 @@ import '../data/osm_stops.dart';
 import '../data/guest_history.dart';
 import '../data/pilot_planner.dart';
 import '../data/mapbox_road_service.dart';
+import '../data/shared_taxi_store.dart';
 import '../domain/routing_engine.dart';
+import 'shared_taxi_screen.dart';
 import 'trip_follow_screen.dart';
 import 'widgets/journey_map_leg.dart';
 import 'widgets/lima_map.dart';
@@ -413,6 +415,30 @@ class _PilotDetailScreenState extends State<_PilotDetailScreen> {
     }
   }
 
+  /// El tramo de taxi puente del recorrido, si lo tiene.
+  SharedTaxiRequest? _taxiRequest() {
+    final edge = widget.alternative.edges
+        .where((e) => e.kind == EdgeKind.taxiBridge)
+        .firstOrNull;
+    if (edge == null) return null;
+    final from = widget.pilot.stopPoints[edge.fromNodeId];
+    final to = widget.pilot.stopPoints[edge.toNodeId];
+    if (from == null || to == null) return null;
+    String name(String id) => id == 'trip:origin'
+        ? widget.origin
+        : id == 'trip:destination'
+        ? widget.destination
+        : widget.pilot.stopNames[id] ?? 'Punto del recorrido';
+    return SharedTaxiRequest(
+      fromLabel: name(edge.fromNodeId),
+      toLabel: name(edge.toNodeId),
+      from: from,
+      to: to,
+      taxiCents: edge.costCents,
+      distanceMetres: edge.distanceMetres,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final steps = _summarizeSteps(widget.alternative, widget.pilot);
@@ -597,6 +623,10 @@ class _PilotDetailScreenState extends State<_PilotDetailScreen> {
                           ],
                         ),
                       ),
+                    ],
+                    if (_taxiRequest() != null) ...[
+                      const SizedBox(height: 14),
+                      SharedTaxiEntryCard(request: _taxiRequest()!),
                     ],
                     const SizedBox(height: 14),
 

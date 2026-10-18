@@ -9,7 +9,9 @@ import 'package:latlong2/latlong.dart';
 import '../../../core/notifications/notification_service.dart';
 import '../../../core/theme/palette.dart';
 import '../data/guest_history.dart';
+import '../data/shared_taxi_store.dart';
 import 'planner_home_screen.dart';
+import 'shared_taxi_screen.dart';
 import 'widgets/journey_map_leg.dart';
 import 'widgets/lima_map.dart';
 
@@ -55,6 +57,23 @@ class _TripFollowScreenState extends State<TripFollowScreen> {
       _startGpsTracking();
       _notifyTripStarted();
     }
+  }
+
+  /// Datos del tramo de taxi actual para ofrecer compartirlo.
+  SharedTaxiRequest? _taxiRequestFor(GuestTripLeg leg) {
+    if (leg.kind != 'taxiBridge') return null;
+    final mapLeg = widget.journeyLegs
+        .where((item) => item.kind == JourneyLegKind.taxi)
+        .firstOrNull;
+    if (mapLeg == null) return null;
+    return SharedTaxiRequest(
+      fromLabel: leg.from,
+      toLabel: leg.to,
+      from: mapLeg.from,
+      to: mapLeg.to,
+      taxiCents: leg.costCents,
+      distanceMetres: leg.distanceMetres,
+    );
   }
 
   // ------------------------------------------------------- notificaciones
@@ -596,6 +615,10 @@ class _TripFollowScreenState extends State<TripFollowScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
+                      if (_taxiRequestFor(current) != null) ...[
+                        const SizedBox(height: 12),
+                        SharedTaxiEntryCard(request: _taxiRequestFor(current)!),
+                      ],
                       const SizedBox(height: 14),
                       FilledButton.icon(
                         onPressed: _busy
