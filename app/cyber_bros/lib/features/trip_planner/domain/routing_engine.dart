@@ -161,6 +161,7 @@ final class PlanAlternative {
     required this.transfers,
     required this.hasEstimatedData,
     required this.hasCommunityData,
+    this.tradeoffText,
   });
 
   final String label;
@@ -172,6 +173,22 @@ final class PlanAlternative {
   final int transfers;
   final bool hasEstimatedData;
   final bool hasCommunityData;
+  final String? tradeoffText;
+
+  PlanAlternative copyWith({String? tradeoffText, String? label}) {
+    return PlanAlternative(
+      label: label ?? this.label,
+      edges: edges,
+      costCents: costCents,
+      walkMetres: walkMetres,
+      longestWalkMetres: longestWalkMetres,
+      durationMinutes: durationMinutes,
+      transfers: transfers,
+      hasEstimatedData: hasEstimatedData,
+      hasCommunityData: hasCommunityData,
+      tradeoffText: tradeoffText ?? this.tradeoffText,
+    );
+  }
 }
 
 abstract interface class PlannerGateway {
@@ -349,9 +366,10 @@ final class LocalPlanner implements PlannerGateway {
     take('Menos caminata', leastWalk);
     take('Más rápida', fastest);
     take('Menos transbordos', fewestTransfers);
-    return FeasiblePlan([
+    final raw = [
       for (final item in selected) _alternative(item, names[item]!),
-    ], degraded: degraded);
+    ];
+    return FeasiblePlan(enrichWithTradeoffs(raw), degraded: degraded);
   }
 
   _Label? _advance(
@@ -485,6 +503,140 @@ final class LocalPlanner implements PlannerGateway {
         (edge) => edge.certainty == DataCertainty.community,
       ),
     );
+  }
+
+  /// Genera explicaciones de tradeoffs deterministas con cifras exactas (RF-08, RNF-15)
+  static List<PlanAlternative> enrichWithTradeoffs(
+    List<PlanAlternative> alternatives,
+  ) {
+    if (alternatives.isEmpty) return alternatives;
+    if (alternatives.length == 1) {
+      final single = alternatives.first;
+      String text;
+      if (single.edges.every((e) => e.kind == EdgeKind.walk)) {
+        text =
+            '100% a pie: sin gasto de pasaje, trayecto de ${single.walkMetres} m (~${(single.walkMetres / 100).round()} cuadras).';
+      } else if (single.edges.every((e) => e.kind == EdgeKind.taxiBridge)) {
+        text =
+            'Taxi UberX directo: sin caminata, llegada en ~${single.durationMinutes} min.';
+      } else if (single.edges.any((e) => e.kind == EdgeKind.taxiBridge)) {
+        final taxi =
+            single.edges.firstWhere((e) => e.kind == EdgeKind.taxiBridge);
+        final km = (taxi.distanceMetres / 1000).toStringAsFixed(1);
+        final taxiCost = (taxi.costCents / 100).toStringAsFixed(2);
+        final walkBlocks = (single.longestWalkMetres / 100).round();
+        text =
+            'Enlace taxi de ~$km km (+S/ $taxiCost): tu caminata continua baja a ${single.longestWalkMetres} m (~$walkBlocks cuadras).';
+      } else if (single.transfers == 0 &&
+          single.edges.any((e) => e.kind == EdgeKind.ride)) {
+        text =
+            'Ruta directa sin transbordos: 1 solo bus con caminata de ~${(single.walkMetres / 100).round()} cuadras (${single.walkMetres} m).';
+      } else {
+        text =
+            'Opción disponible por S/ ${(single.costCents / 100).toStringAsFixed(2)} y ${single.transfers} transbordo(s).';
+      }
+      return [single.copyWith(tradeoffText: text)];
+    }
+
+    final cheapest = alternatives.reduce(
+      (a, b) => a.costCents <= b.costCents ? a : b,
+    );
+    final fastest = alternatives.reduce(
+      (a, b) => a.durationMinutes <= b.durationMinutes ? a : b,
+    );
+
+    return alternatives.map((alt) {
+      if (alt.tradeoffText != null && alt.tradeoffText!.isNotEmpty) {
+        return alt;
+      }
+
+      // 1. Caso 100% caminata
+      if (alt.edges.every((e) => e.kind == EdgeKind.walk)) {
+        final savedSoles = cheapest.costCents > 0
+            ? (cheapest.costCents / 100).toStringAsFixed(2)
+            : '2.50';
+        return alt.copyWith(
+          tradeoffText:
+              'Ahorras S/ $savedSoles de pasaje caminando ~${(alt.walkMetres / 100).round()} cuadras (${alt.walkMetres} m).',
+        );
+      }
+
+      // 2. Caso taxi directo
+      if (alt.edges.every((e) => e.kind == EdgeKind.taxiBridge)) {
+        final taxiEdge = alt.edges.first;
+        final km = (taxiEdge.distanceMetres / 1000).toStringAsFixed(1);
+        return alt.copyWith(
+          tradeoffText:
+              'Llegada directa sin caminar: taxi de ~$km km en ~${alt.durationMinutes} min (+S/ ${(alt.costCents / 100).toStringAsFixed(2)}).',
+        );
+      }
+
+      // 3. Caso enlace taxi puente (RF-08 explícito)
+      if (alt.edges.any((e) => e.kind == EdgeKind.taxiBridge)) {
+        final taxi = alt.edges.firstWhere((e) => e.kind == EdgeKind.taxiBridge);
+        final km = (taxi.distanceMetres / 1000).toStringAsFixed(1);
+        final taxiCost = (taxi.costCents / 100).toStringAsFixed(2);
+        final walkBlocks = (alt.longestWalkMetres / 100).round();
+        return alt.copyWith(
+          tradeoffText:
+              'Enlace taxi de ~$km km (+S/ $taxiCost): tu caminata continua baja a ${alt.longestWalkMetres} m (~$walkBlocks cuadras).',
+        );
+      }
+
+      // 4. Caso ruta directa sin transbordo
+      if (alt.transfers == 0 && alt.edges.any((e) => e.kind == EdgeKind.ride)) {
+        final walkBlocks = (alt.walkMetres / 100).round();
+        return alt.copyWith(
+          tradeoffText:
+              'Ruta directa sin transbordo: 1 solo bus con caminata de ~$walkBlocks cuadras (${alt.walkMetres} m).',
+        );
+      }
+
+      // 5. Comparación con la más barata
+      if (identical(alt, cheapest) || alt.costCents == cheapest.costCents) {
+        if (fastest.durationMinutes < alt.durationMinutes) {
+          final timeDiff = alt.durationMinutes - fastest.durationMinutes;
+          final extraCost = (fastest.costCents - alt.costCents) / 100;
+          if (extraCost > 0) {
+            return alt.copyWith(
+              tradeoffText:
+                  'La más económica: ahorras S/ ${extraCost.toStringAsFixed(2)} sumando $timeDiff min de viaje.',
+            );
+          }
+        }
+        return alt.copyWith(
+          tradeoffText:
+              'La más económica por S/ ${(alt.costCents / 100).toStringAsFixed(2)} caminando ~${(alt.walkMetres / 100).round()} cuadras.',
+        );
+      }
+
+      // 6. Comparación si ahorra tiempo respecto a la más barata
+      if (alt.durationMinutes < cheapest.durationMinutes) {
+        final timeSaved = cheapest.durationMinutes - alt.durationMinutes;
+        final extraCost = (alt.costCents - cheapest.costCents) / 100;
+        return alt.copyWith(
+          tradeoffText:
+              'Llegas $timeSaved min antes pagando +S/ ${extraCost.toStringAsFixed(2)} adicionales.',
+        );
+      }
+
+      // 7. Comparación si ahorra caminata respecto a la más barata
+      if (alt.walkMetres < cheapest.walkMetres) {
+        final walkSaved = cheapest.walkMetres - alt.walkMetres;
+        final extraCost = (alt.costCents - cheapest.costCents) / 100;
+        final blocks = (walkSaved / 100).round();
+        return alt.copyWith(
+          tradeoffText:
+              'Caminas $blocks cuadras menos (~$walkSaved m) por +S/ ${extraCost.toStringAsFixed(2)} adicionales.',
+        );
+      }
+
+      // 8. Fallback equilibrado
+      return alt.copyWith(
+        tradeoffText:
+            'Equilibrio: S/ ${(alt.costCents / 100).toStringAsFixed(2)}, ~${alt.durationMinutes} min y ${alt.transfers} transbordo(s).',
+      );
+    }).toList();
   }
 }
 

@@ -15,6 +15,7 @@ final class PilotPlanningResult {
     required this.stopPoints,
     required this.warning,
     required this.datasetId,
+    this.isRushHour = false,
   });
 
   final PlanResult result;
@@ -23,6 +24,7 @@ final class PilotPlanningResult {
   final Map<String, LatLng> stopPoints;
   final String warning;
   final String datasetId;
+  final bool isRushHour;
 }
 
 /// A limited corridor pilot. Stops come from OSM and fares are ATU general
@@ -43,6 +45,11 @@ final class PilotPlanner {
       );
     }
     final routes = data['routes'] as List<dynamic>;
+    final rush = isRushHour();
+    final busSpeedMetresPerMin = rush ? 220 : 300;
+    final taxiSpeedMetresPerMin = rush ? 240 : 350;
+    final boardWaitMinutes = rush ? 7 : 4;
+
     final stops = <String, LatLng>{};
     final names = <String, String>{};
     final stopNames = <String, String>{};
@@ -76,7 +83,7 @@ final class PilotPlanner {
               kind: EdgeKind.board,
               routeId: routeId,
               distanceMetres: 0,
-              durationMinutes: 1,
+              durationMinutes: boardWaitMinutes,
               costCents: fareCents,
               certainty: DataCertainty.community,
               source: route['fare_source'] as String,
@@ -114,7 +121,8 @@ final class PilotPlanner {
             kind: EdgeKind.ride,
             routeId: routeId,
             distanceMetres: metres,
-            durationMinutes: math.max(1, (metres / 300).ceil()),
+            durationMinutes:
+                math.max(1, (metres / busSpeedMetresPerMin).ceil()),
             costCents: 0,
             certainty: DataCertainty.community,
             source: source,
@@ -178,7 +186,13 @@ final class PilotPlanner {
       }
     }
     if (limits.allowTaxiBridge) {
-      _addTaxiBridges(stops, stopRoutes, limits, edges);
+      _addTaxiBridges(
+        stops,
+        stopRoutes,
+        limits,
+        edges,
+        taxiSpeed: taxiSpeedMetresPerMin,
+      );
       _addAccessAndEgressTaxiBridges(
         startId,
         origin.point,
@@ -187,6 +201,7 @@ final class PilotPlanner {
         stops,
         limits,
         edges,
+        taxiSpeed: taxiSpeedMetresPerMin,
       );
     }
     final graph = RoutingGraph(
@@ -209,6 +224,7 @@ final class PilotPlanner {
         originPoint: origin.point,
         destinationPoint: destination.point,
         limits: limits,
+        taxiSpeed: taxiSpeedMetresPerMin,
       );
     }
     return PilotPlanningResult(
@@ -222,21 +238,35 @@ final class PilotPlanner {
       }),
       warning: data['fare_warning'] as String,
       datasetId: data['dataset_id'] as String,
+      isRushHour: rush,
     );
   }
 
   static int _estimatedRoadMetres(LatLng first, LatLng second) =>
       (const Distance().as(LengthUnit.Meter, first, second) * 1.3).round();
 
+  /// Detecta hora punta en Lima (UTC-5):
+  /// - Lunes a viernes de 07:00 a 09:59 y de 17:30 a 21:00
+  static bool isRushHour([DateTime? customTime]) {
+    final now = (customTime ?? DateTime.now()).toUtc().subtract(const Duration(hours: 5));
+    final hour = now.hour;
+    final minute = now.minute;
+    final isWeekday = now.weekday >= DateTime.monday && now.weekday <= DateTime.friday;
+    final isMorningRush = hour >= 7 && hour < 10;
+    final isEveningRush = (hour == 17 && minute >= 30) || (hour >= 18 && hour <= 21);
+    return isWeekday && (isMorningRush || isEveningRush);
+  }
+
   /// Modelo oficial de tarificación UberX Lima:
   /// - Tarifa mínima de servicio: S/ 8.50 (850 centavos)
   /// - Tarifa base (pickup): S/ 3.80 (380 centavos)
   /// - Tarifa kilométrica: S/ 1.45/km (145 centavos/km)
   /// - Tarifa por tiempo: S/ 0.28/min (28 centavos/minuto)
-  /// - Factor dinámico (Surge): 1.20x en hora pico de Lima (7-9 AM / 6-9 PM de lunes a viernes)
+  /// - Factor dinámico (Surge): 1.20x en hora punta de Lima
   static int estimateUberXCents({
     required int distanceMetres,
     required int durationMinutes,
+    DateTime? customTime,
   }) {
     const minFareCents = 850;
     const baseFareCents = 380;
@@ -247,12 +277,7 @@ final class PilotPlanner {
         (centsPerKm * distanceMetres / 1000).round() +
         (centsPerMinute * durationMinutes);
 
-    final now = DateTime.now().toUtc().subtract(const Duration(hours: 5));
-    final hour = now.hour;
-    final isWeekday = now.weekday >= DateTime.monday && now.weekday <= DateTime.friday;
-    final isRushHour = isWeekday && ((hour >= 7 && hour <= 9) || (hour >= 18 && hour <= 21));
-    final surge = isRushHour ? 1.20 : 1.0;
-
+    final surge = isRushHour(customTime) ? 1.20 : 1.0;
     final finalCents = (rawCents * surge).round();
     return math.max(minFareCents, finalCents);
   }
@@ -261,8 +286,9 @@ final class PilotPlanner {
     Map<String, LatLng> stops,
     Map<String, Set<String>> stopRoutes,
     PlanLimits limits,
-    List<TravelEdge> edges,
-  ) {
+    List<TravelEdge> edges, {
+    int taxiSpeed = 350,
+  }) {
     const maxTaxiMetres = 1800;
     const maxDestinationsPerStop = 4;
     for (final from in stops.entries) {
@@ -286,7 +312,7 @@ final class PilotPlanner {
         return order == 0 ? a.id.compareTo(b.id) : order;
       });
       for (final target in nearby.take(maxDestinationsPerStop)) {
-        final minutes = math.max(2, (target.metres / 350).ceil());
+        final minutes = math.max(2, (target.metres / taxiSpeed).ceil());
         final estimatedCents = estimateUberXCents(
           distanceMetres: target.metres,
           durationMinutes: minutes,
@@ -316,8 +342,9 @@ final class PilotPlanner {
     LatLng destinationPoint,
     Map<String, LatLng> stops,
     PlanLimits limits,
-    List<TravelEdge> edges,
-  ) {
+    List<TravelEdge> edges, {
+    int taxiSpeed = 350,
+  }) {
     const maxAccessTaxiMetres = 5000;
     final accessCandidates = <({String id, int metres})>[];
     final egressCandidates = <({String id, int metres})>[];
@@ -340,7 +367,7 @@ final class PilotPlanner {
     egressCandidates.sort((a, b) => a.metres.compareTo(b.metres));
 
     for (final target in accessCandidates.take(3)) {
-      final minutes = math.max(2, (target.metres / 350).ceil());
+      final minutes = math.max(2, (target.metres / taxiSpeed).ceil());
       final estimatedCents = estimateUberXCents(
         distanceMetres: target.metres,
         durationMinutes: minutes,
@@ -362,7 +389,7 @@ final class PilotPlanner {
     }
 
     for (final from in egressCandidates.take(3)) {
-      final minutes = math.max(2, (from.metres / 350).ceil());
+      final minutes = math.max(2, (from.metres / taxiSpeed).ceil());
       final estimatedCents = estimateUberXCents(
         distanceMetres: from.metres,
         durationMinutes: minutes,
@@ -391,6 +418,7 @@ final class PilotPlanner {
     required LatLng originPoint,
     required LatLng destinationPoint,
     required PlanLimits limits,
+    int taxiSpeed = 350,
   }) async {
     final directDistance = _estimatedRoadMetres(originPoint, destinationPoint);
     final walkMinutes = (directDistance / 75).ceil();
@@ -476,7 +504,7 @@ final class PilotPlanner {
     } catch (_) {}
 
     // 3. Alternativa estimada de taxi / enlace (para viajes no triviales)
-    final taxiMinutes = math.max(5, (directDistance / 350).ceil());
+    final taxiMinutes = math.max(5, (directDistance / taxiSpeed).ceil());
     final taxiCents = estimateUberXCents(
       distanceMetres: directDistance,
       durationMinutes: taxiMinutes,
@@ -533,6 +561,9 @@ final class PilotPlanner {
     // 5. Ordenar por costo ascendente: las más baratas primero (S/ 0 a pie, luego bus S/ 2.50, luego taxi)
     deduplicated.sort((a, b) => a.costCents.compareTo(b.costCents));
 
-    return FeasiblePlan(deduplicated, degraded: true);
+    return FeasiblePlan(
+      LocalPlanner.enrichWithTradeoffs(deduplicated),
+      degraded: true,
+    );
   }
 }

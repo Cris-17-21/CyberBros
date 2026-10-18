@@ -129,6 +129,55 @@ class _PilotOptionsScreenState extends State<PilotOptionsScreen> {
                     ],
                   ),
                   const SizedBox(height: 14),
+                  if (pilot.isRushHour) ...[
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 14),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: const Color(0xFFF59E0B).withValues(alpha: 0.6),
+                        ),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(
+                            Icons.traffic_rounded,
+                            color: Color(0xFFD97706),
+                            size: 22,
+                          ),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Hora punta en Lima (Tráfico alto)',
+                                  style: TextStyle(
+                                    color: Color(0xFF92400E),
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Tiempos de viaje y tarifas de taxi calibrados por congestión vehicular.',
+                                  style: TextStyle(
+                                    color: Color(0xFFB45309),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   for (final alternative in alternatives)
                     Card(
                       child: InkWell(
@@ -205,6 +254,45 @@ class _PilotOptionsScreenState extends State<PilotOptionsScreen> {
                                   fontSize: 12,
                                 ),
                               ),
+                              if (alternative.tradeoffText != null &&
+                                  alternative.tradeoffText!.isNotEmpty) ...[
+                                const SizedBox(height: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF0FDF4),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: const Color(0xFFBBF7D0),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Icon(
+                                        Icons.bolt_rounded,
+                                        size: 16,
+                                        color: Color(0xFF16A34A),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          alternative.tradeoffText!,
+                                          style: const TextStyle(
+                                            color: Color(0xFF15803D),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            height: 1.3,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -461,6 +549,45 @@ class _PilotDetailScreenState extends State<_PilotDetailScreen> {
                         ),
                       ],
                     ),
+                    if (widget.alternative.tradeoffText != null &&
+                        widget.alternative.tradeoffText!.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 9,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFFBBF7D0),
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.bolt_rounded,
+                              size: 18,
+                              color: Color(0xFF16A34A),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                widget.alternative.tradeoffText!,
+                                style: const TextStyle(
+                                  color: Color(0xFF15803D),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  height: 1.3,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 14),
 
                     // Botón de acción principal
