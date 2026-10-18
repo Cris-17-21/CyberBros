@@ -41,6 +41,24 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <!-- Firebase Web SDK Modular Initialization -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDDesiLqQNcr514_yCwFuTuCJ2TuOBZN7M",
+      authDomain: "tributo-educa-peru.firebaseapp.com",
+      projectId: "tributo-educa-peru",
+      storageBucket: "tributo-educa-peru.firebasestorage.app",
+      messagingSenderId: "368137869256",
+      appId: "1:368137869256:web:d47782cb3d9a79d02752fd",
+      measurementId: "G-7KFJ6RFWM6"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    getAnalytics(app);
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
