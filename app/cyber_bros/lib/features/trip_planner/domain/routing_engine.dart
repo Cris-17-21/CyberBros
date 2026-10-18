@@ -294,11 +294,31 @@ final class LocalPlanner implements PlannerGateway {
         .toList();
     final selected = <_Label>[];
     final names = <_Label, String>{};
+
+    bool isNearDuplicate(_Label a, _Label b) {
+      final costDiff = (a.costCents - b.costCents).abs();
+      final walkDiff = (a.walkMetres - b.walkMetres).abs();
+      final timeDiff = (a.durationMinutes - b.durationMinutes).abs();
+      final boardingsDiff = (a.boardings - b.boardings).abs();
+
+      // Si tienen el mismo costo y mismos transbordos, y la caminata o duración varía de forma insignificante:
+      if (costDiff == 0 && boardingsDiff == 0 && walkDiff <= 60 && timeDiff <= 3) {
+        return true;
+      }
+      if (costDiff == 0 && walkDiff <= 25) {
+        return true;
+      }
+      return false;
+    }
+
     void take(String label, int Function(_Label, _Label) compare) {
       if (selected.length >= 3) return;
       final ranked = [...pareto]..sort(compare);
       for (final item in ranked) {
         if (selected.contains(item)) continue;
+        if (selected.any((existing) => isNearDuplicate(item, existing))) {
+          continue;
+        }
         selected.add(item);
         names[item] = label;
         return;

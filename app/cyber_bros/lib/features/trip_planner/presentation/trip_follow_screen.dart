@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../core/theme/palette.dart';
@@ -32,8 +33,10 @@ class _TripFollowScreenState extends State<TripFollowScreen> {
   int _stage = 0;
   bool _busy = false;
 
-  // Seguimiento interactivo con flecha en movimiento
+  // Seguimiento interactivo con flecha en movimiento y GPS
   Timer? _animTimer;
+  StreamSubscription<Position>? _gpsSubscription;
+  bool _isUsingGps = false;
   LatLng? _currentNavPoint;
   double _currentBearing = 0.0;
   int _animPointIndex = 0;
@@ -47,11 +50,15 @@ class _TripFollowScreenState extends State<TripFollowScreen> {
   void initState() {
     super.initState();
     _setupStageNavigation();
+    if (_trip.status == GuestTripStatus.active) {
+      _startGpsTracking();
+    }
   }
 
   @override
   void dispose() {
     _animTimer?.cancel();
+    _gpsSubscription?.cancel();
     _mapController.dispose();
     super.dispose();
   }
@@ -85,9 +92,119 @@ class _TripFollowScreenState extends State<TripFollowScreen> {
       } catch (_) {}
     }
 
-    // Si el viaje está activo, mover la flechita fluidamente siguiendo las calles
-    if (_trip.status == GuestTripStatus.active && _currentLegPoints.length > 1) {
+    // Si el viaje está activo, asegurar que el seguimiento esté corriendo
+    if (_trip.status == GuestTripStatus.active) {
+      if (!_isUsingGps) {
+        _startGpsTracking();
+      }
+    }
+  }
+
+  /// Inicia la navegación GPS en vivo con Geolocator
+  Future<void> _startGpsTracking() async {
+    _animTimer?.cancel();
+    _gpsSubscription?.cancel();
+
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        _startSimulatedProgression();
+        return;
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          _startSimulatedProgression();
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        _startSimulatedProgression();
+        return;
+      }
+
+      _isUsingGps = true;
+
+      // Obtener posición inmediata para centrar mapa
+      Position? currentPos;
+      try {
+        currentPos = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 4),
+          ),
+        );
+      } catch (_) {
+        currentPos = null;
+      }
+
+      if (currentPos != null && mounted) {
+        _onGpsPosition(currentPos);
+      }
+
+      // Escuchar stream en vivo de alta precisión (cada 2 metros)
+      _gpsSubscription = Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 2,
+        ),
+      ).listen(
+        (Position position) {
+          if (!mounted) return;
+          _onGpsPosition(position);
+        },
+        onError: (_) {
+          _isUsingGps = false;
+          _startSimulatedProgression();
+        },
+      );
+    } catch (_) {
+      _isUsingGps = false;
       _startSimulatedProgression();
+    }
+  }
+
+  void _onGpsPosition(Position position) {
+    final newPoint = LatLng(position.latitude, position.longitude);
+    final prevPoint = _currentNavPoint;
+
+    double bearing = _currentBearing;
+    if (position.heading > 0) {
+      bearing = position.heading * (math.pi / 180.0);
+    } else if (prevPoint != null) {
+      final dist = const Distance().as(LengthUnit.Meter, prevPoint, newPoint);
+      if (dist >= 2) {
+        bearing = _calculateBearing(prevPoint, newPoint);
+      }
+    }
+
+    setState(() {
+      _currentNavPoint = newPoint;
+      _currentBearing = bearing;
+    });
+
+    try {
+      _mapController.move(newPoint, 17.0);
+    } catch (_) {}
+
+    // Si el usuario llega a menos de 25m del final del tramo actual, avanzar de paso automáticamente
+    if (_currentLegPoints.isNotEmpty) {
+      final target = _currentLegPoints.last;
+      final distanceToEnd = const Distance().as(
+        LengthUnit.Meter,
+        newPoint,
+        target,
+      );
+      if (distanceToEnd <= 25) {
+        if (_stage + 1 < _stages.length) {
+          _nextStep();
+        } else {
+          _saveStatus(GuestTripStatus.completed);
+        }
+      }
     }
   }
 
@@ -164,6 +281,7 @@ class _TripFollowScreenState extends State<TripFollowScreen> {
   /// Regresa directamente a la pantalla de inicio descartando el flujo de búsqueda previo
   void _returnHome() {
     _animTimer?.cancel();
+    _gpsSubscription?.cancel();
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute<void>(builder: (_) => const PlannerHomeScreen()),
       (route) => false,
@@ -194,6 +312,8 @@ class _TripFollowScreenState extends State<TripFollowScreen> {
     );
 
     if (confirmed == true) {
+      _animTimer?.cancel();
+      _gpsSubscription?.cancel();
       await _saveStatus(GuestTripStatus.abandoned);
       if (mounted) {
         _returnHome();
@@ -209,42 +329,58 @@ class _TripFollowScreenState extends State<TripFollowScreen> {
         ? null
         : stages[_stage.clamp(0, stages.length - 1)];
 
-    return Scaffold(
-      backgroundColor: Palette.background,
-      body: Stack(
-        children: [
-          // 1. Mapa interactivo en vivo con seguimiento de cámara y flecha en movimiento
-          Positioned.fill(
-            child: LimaMap(
-              height: double.infinity,
-              borderRadius: 0,
-              mapController: _mapController,
-              journeyLegs: widget.journeyLegs,
-              navigationPoint: _currentNavPoint,
-              navigationBearing: _currentBearing,
-              originPoint: widget.journeyLegs.isNotEmpty
-                  ? widget.journeyLegs.first.from
-                  : null,
-              destinationPoint: widget.journeyLegs.isNotEmpty
-                  ? widget.journeyLegs.last.to
-                  : null,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (_trip.status == GuestTripStatus.active) {
+          _cancelTrip();
+        } else {
+          _returnHome();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Palette.background,
+        body: Stack(
+          children: [
+            // 1. Mapa interactivo en vivo con seguimiento de cámara y flecha en movimiento
+            Positioned.fill(
+              child: LimaMap(
+                height: double.infinity,
+                borderRadius: 0,
+                mapController: _mapController,
+                journeyLegs: widget.journeyLegs,
+                navigationPoint: _currentNavPoint,
+                navigationBearing: _currentBearing,
+                originPoint: widget.journeyLegs.isNotEmpty
+                    ? widget.journeyLegs.first.from
+                    : null,
+                destinationPoint: widget.journeyLegs.isNotEmpty
+                    ? widget.journeyLegs.last.to
+                    : null,
+              ),
             ),
-          ),
 
-          // 2. Cabecera superior flotante estilo Google Maps con la indicación del tramo actual
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: Colors.white,
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back_rounded, color: Palette.ink),
-                      onPressed: () => Navigator.of(context).pop(),
+            // 2. Cabecera superior flotante estilo Google Maps con la indicación del tramo actual
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: Colors.white,
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back_rounded, color: Palette.ink),
+                        onPressed: () {
+                          if (_trip.status == GuestTripStatus.active) {
+                            _cancelTrip();
+                          } else {
+                            _returnHome();
+                          }
+                        },
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
+                    const SizedBox(width: 12),
                   Expanded(
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -401,9 +537,11 @@ class _TripFollowScreenState extends State<TripFollowScreen> {
                             : () async {
                                 if (_trip.status != GuestTripStatus.active) {
                                   await _saveStatus(GuestTripStatus.active);
-                                  _startSimulatedProgression();
-                                } else {
+                                  _startGpsTracking();
+                                } else if (_stage + 1 < stages.length) {
                                   _nextStep();
+                                } else {
+                                  await _saveStatus(GuestTripStatus.completed);
                                 }
                               },
                         icon: const Icon(Icons.arrow_forward_rounded),
@@ -439,8 +577,9 @@ class _TripFollowScreenState extends State<TripFollowScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 IconData _icon(String kind) => switch (kind) {
