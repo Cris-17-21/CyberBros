@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -83,6 +85,28 @@ class _TripConditionsScreenState extends State<TripConditionsScreen> {
     _budgetController.dispose();
     _notesController.dispose();
     super.dispose();
+  }
+
+  double _getDynamicStep(double currentCost) {
+    if (currentCost < 4.0) return 0.50; // S/ 0 a S/ 4: paso de 50 céntimos
+    if (currentCost < 10.0) return 1.00; // S/ 4 a S/ 10: paso de 1 sol
+    if (currentCost < 25.0) return 2.50; // S/ 10 a S/ 25: paso de 2.50 soles
+    if (currentCost < 50.0) return 5.00; // S/ 25 a S/ 50: paso de 5 soles
+    return 10.00;                        // S/ 50+: paso de 10 soles
+  }
+
+  void _stepBudget({required bool increment}) {
+    final current =
+        double.tryParse(_budgetController.text.replaceAll(',', '.')) ?? 8.0;
+    final step = increment
+        ? _getDynamicStep(current)
+        : _getDynamicStep(math.max(0.1, current - 0.05));
+    final next = increment
+        ? (current + step).clamp(0.50, 200.0)
+        : (current - step).clamp(0.50, 200.0);
+    setState(() {
+      _budgetController.text = next.toStringAsFixed(next % 1 == 0 ? 0 : 2);
+    });
   }
 
   void _openOptions() {
@@ -200,47 +224,128 @@ class _TripConditionsScreenState extends State<TripConditionsScreen> {
             icon: Icons.payments_outlined,
             child: Column(
               children: [
-                Container(
-                  height: 64,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: Palette.surfaceAlt,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        'S/  ',
-                        style: TextStyle(
-                          fontSize: 21,
-                          fontWeight: FontWeight.w800,
-                          color: Palette.inkMuted,
-                        ),
-                      ),
-                      SizedBox(
-                        width: 96,
-                        child: TextField(
-                          controller: _budgetController,
-                          textAlign: TextAlign.center,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Botón para bajar el costo
+                    Material(
+                      color: Palette.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      elevation: 1.5,
+                      shadowColor: Colors.black.withValues(alpha: 0.08),
+                      child: InkWell(
+                        onTap: () => _stepBudget(increment: false),
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          width: 52,
+                          height: 60,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Palette.inkMuted.withValues(alpha: 0.15),
+                            ),
                           ),
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w900,
+                          child: const Icon(
+                            Icons.remove_rounded,
+                            size: 26,
                             color: Palette.ink,
-                            letterSpacing: -0.8,
-                          ),
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            filled: false,
-                            contentPadding: EdgeInsets.zero,
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Visualizador central del costo
+                    Expanded(
+                      child: Container(
+                        height: 64,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: Palette.surfaceAlt,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Palette.primary.withValues(alpha: 0.25),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text(
+                              'S/  ',
+                              style: TextStyle(
+                                fontSize: 21,
+                                fontWeight: FontWeight.w800,
+                                color: Palette.inkMuted,
+                              ),
+                            ),
+                            SizedBox(
+                              width: 96,
+                              child: TextField(
+                                controller: _budgetController,
+                                textAlign: TextAlign.center,
+                                onChanged: (_) => setState(() {}),
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                  decimal: true,
+                                ),
+                                style: const TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w900,
+                                  color: Palette.ink,
+                                  letterSpacing: -0.8,
+                                ),
+                                decoration: const InputDecoration(
+                                  border: InputBorder.none,
+                                  filled: false,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Botón para subir el costo
+                    Material(
+                      color: Palette.primary,
+                      borderRadius: BorderRadius.circular(16),
+                      elevation: 2,
+                      shadowColor: Palette.primary.withValues(alpha: 0.35),
+                      child: InkWell(
+                        onTap: () => _stepBudget(increment: true),
+                        borderRadius: BorderRadius.circular(16),
+                        child: const SizedBox(
+                          width: 52,
+                          height: 60,
+                          child: Icon(
+                            Icons.add_rounded,
+                            size: 26,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Builder(
+                  builder: (context) {
+                    final curr = double.tryParse(
+                          _budgetController.text.replaceAll(',', '.'),
+                        ) ??
+                        8.0;
+                    final step = _getDynamicStep(curr);
+                    return Text(
+                      'Paso dinámico: ±S/ ${step.toStringAsFixed(step % 1 == 0 ? 0 : 2)}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Palette.inkMuted,
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 12),
                 Wrap(

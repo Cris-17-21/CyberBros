@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:cyber_bros/features/trip_planner/data/osm_stops.dart';
 import 'package:cyber_bros/features/trip_planner/data/pilot_planner.dart';
 import 'package:cyber_bros/features/trip_planner/domain/routing_engine.dart';
@@ -162,5 +163,55 @@ void main() {
       expect(stop.point.longitude, closeTo(-77.033347, 0.00001));
       expect(stop.source, equals('mapbox:geocoding'));
     });
+
+    test('PilotPlanner incluye opciones de corredor y taxi incluso con condiciones mínimas', () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      final origin = OsmStop(
+        id: 'address:-12.0712,-77.0425',
+        name: 'Av. Brasil, Jesús María',
+        point: const LatLng(-12.0712, -77.0425),
+        source: 'address',
+      );
+      final destination = OsmStop(
+        id: 'address:-12.0575,-77.0375',
+        name: 'Plaza Bolognesi, Lima',
+        point: const LatLng(-12.0575, -77.0375),
+        source: 'address',
+      );
+
+      // Condiciones al mínimo (presupuesto S/ 1.00, caminata continua 100m)
+      final res = await PilotPlanner.plan(
+        origin: origin,
+        destination: destination,
+        limits: const PlanLimits(
+          budgetCents: 100, // S/ 1.00 (menor a tarifa de bus de S/ 2.35)
+          maxContinuousWalkMetres: 100, // Menor a distancia normal de paraderos
+          maxTotalWalkMetres: 200,
+          allowTaxiBridge: true,
+        ),
+      );
+
+      expect(res.result, isA<FeasiblePlan>());
+      final plan = res.result as FeasiblePlan;
+      expect(plan.alternatives.length, greaterThanOrEqualTo(2));
+
+      // Debe incluir alternativas de transporte público
+      final hasTransit = plan.alternatives.any(
+        (a) => a.edges.any((e) => e.kind == EdgeKind.board || e.kind == EdgeKind.ride),
+      );
+      expect(hasTransit, isTrue, reason: 'Debe mostrar las opciones de corredor aunque excedan el presupuesto mínimo');
+
+      // Debe incluir taxi y caminata
+      final hasTaxi = plan.alternatives.any(
+        (a) => a.edges.any((e) => e.kind == EdgeKind.taxiBridge),
+      );
+      expect(hasTaxi, isTrue);
+
+      final hasWalk = plan.alternatives.any(
+        (a) => a.edges.any((e) => e.kind == EdgeKind.walk),
+      );
+      expect(hasWalk, isTrue);
+    });
   });
 }
+
