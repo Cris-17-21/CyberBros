@@ -15,15 +15,32 @@ final class MapboxRoadService {
   // Shared HTTP client with connection pooling and keep-alive
   static final _httpClient = HttpClient()..connectionTimeout = const Duration(seconds: 4);
 
+  /// Largo de una polilínea en metros.
+  static double _lengthMetres(List<LatLng> points) {
+    const distance = Distance();
+    var total = 0.0;
+    for (var i = 0; i < points.length - 1; i++) {
+      total += distance.as(LengthUnit.Meter, points[i], points[i + 1]);
+    }
+    return total;
+  }
+
   /// Returns a detailed polyline following actual street geometry between [origin] and [destination].
   /// [mode] can be 'walking' or 'driving'.
+  ///
+  /// Con [straightenDetours] (para tramos de bus o corredor) se descartan los
+  /// rodeos de auto: si dos paraderos quedan en lados opuestos de una avenida o
+  /// en calles de un solo sentido, la ruta de auto da la vuelta a la manzana
+  /// (p. ej. 262 m en línea recta pasan a 1.8 km). Un bus de corredor no hace
+  /// ese rodeo, así que en ese caso se usa el tramo recto.
   static Future<List<LatLng>> getRoadRoute({
     required LatLng origin,
     required LatLng destination,
     required String mode, // 'walking' | 'driving'
+    bool straightenDetours = false,
   }) async {
     final cacheKey =
-        '$mode:${origin.latitude.toStringAsFixed(5)},${origin.longitude.toStringAsFixed(5)}->${destination.latitude.toStringAsFixed(5)},${destination.longitude.toStringAsFixed(5)}';
+        '$mode${straightenDetours ? '*' : ''}:${origin.latitude.toStringAsFixed(5)},${origin.longitude.toStringAsFixed(5)}->${destination.latitude.toStringAsFixed(5)},${destination.longitude.toStringAsFixed(5)}';
 
     if (_cache.containsKey(cacheKey)) {
       return _cache[cacheKey]!;
@@ -65,6 +82,19 @@ final class MapboxRoadService {
       }
 
       if (points.isNotEmpty) {
+        if (straightenDetours) {
+          final straight = const Distance().as(
+            LengthUnit.Meter,
+            origin,
+            destination,
+          );
+          final road = _lengthMetres(points);
+          if (road > straight * 1.5 && road - straight > 100) {
+            final direct = [origin, destination];
+            _cache[cacheKey] = direct;
+            return direct;
+          }
+        }
         _cache[cacheKey] = points;
         return points;
       }

@@ -392,6 +392,8 @@ class _PilotDetailScreenState extends State<_PilotDetailScreen> {
           origin: leg.from,
           destination: leg.to,
           mode: mode,
+          // Los buses de corredor no dan la vuelta a la manzana como un auto.
+          straightenDetours: leg.kind == JourneyLegKind.bus,
         );
         if (roadPoints.length > 2) {
           return JourneyMapLeg(
@@ -485,7 +487,7 @@ class _PilotDetailScreenState extends State<_PilotDetailScreen> {
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _LegDot(color: Palette.inkMuted, label: 'Caminar'),
+                  _LegDot(color: Palette.walk, label: 'Caminar'),
                   SizedBox(width: 10),
                   _LegDot(color: Palette.primaryDark, label: 'Corredor'),
                   SizedBox(width: 10),
