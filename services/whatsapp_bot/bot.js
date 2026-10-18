@@ -9,7 +9,7 @@ const { planTrip, formatWhatsAppResponse } = require('./planner');
 const TARGET_PHONE_NUMBER = '51915111037';
 
 async function startBot() {
-  console.log('🤖 Iniciando Cyberon WhatsApp Bot con Pairing Code...');
+  console.log('🤖 Iniciando Rutéalo WhatsApp Bot...');
   const { state, saveCreds } = await useMultiFileAuthState('./auth_info_baileys');
 
   const sock = makeWASocket({
@@ -39,15 +39,15 @@ async function startBot() {
     const { connection, lastDisconnect } = update;
 
     if (connection === 'close') {
-      const shouldReconnect =
-        lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-      console.log('⚠️ Conexión cerrada. Reconectando:', shouldReconnect);
+      const statusCode = lastDisconnect?.error?.output?.statusCode;
+      const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+      console.log(`⚠️ Conexión cerrada (status ${statusCode}). Reconectando:`, shouldReconnect);
       if (shouldReconnect) {
         startBot();
       }
     } else if (connection === 'open') {
       console.log('\n======================================================');
-      console.log('✅ ¡Cyberon Bot conectado exitosamente a WhatsApp!');
+      console.log('✅ ¡Rutéalo Bot conectado exitosamente a WhatsApp!');
       console.log('🚀 Listo para responder mensajes de usuarios en tiempo real.');
       console.log('======================================================\n');
     }
