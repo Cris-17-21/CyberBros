@@ -327,7 +327,7 @@ class NotificationService extends ChangeNotifier {
     if (!_ready || !await ensurePermission()) return false;
     await _show(
       id: 9000,
-      title: 'Cyberon',
+      title: 'Rutéalo',
       body: 'Así se verán tus avisos de viaje.',
       channel: _alerts,
       payload: 'history',

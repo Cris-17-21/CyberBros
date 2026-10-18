@@ -15,7 +15,7 @@ class CyberonApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       navigatorKey: cyberonNavigatorKey,
-      title: 'Cyberon',
+      title: 'Rutéalo',
       debugShowCheckedModeBanner: false,
       theme: buildCyberonTheme(),
       home: const _SessionGate(),

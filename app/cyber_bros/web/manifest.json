@@ -1,11 +1,11 @@
 {
-    "name": "cyber_bros",
-    "short_name": "cyber_bros",
+    "name": "Rutéalo",
+    "short_name": "Rutéalo",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0284C7",
+    "theme_color": "#0284C7",
+    "description": "Rutéalo - Llega con lo que tienes. Movilidad inteligente en Lima.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -81,7 +81,7 @@ async function startBot() {
         lower === 'info'
       ) {
         const welcome =
-          `👋 *¡Hola! Soy Cyberon, tu asistente de movilidad inteligente en Lima.*\n\n` +
+          `👋 *¡Hola! Soy Rutéalo, tu asistente de movilidad inteligente en Lima.*\n\n` +
           `Escríbeme tu viaje en un solo mensaje indicando de dónde sales y a dónde vas. Por ejemplo:\n\n` +
           `👉 *De Avenida Tacna a Plaza Butters*\n` +
           `👉 *De Miraflores a Javier Prado con 5 soles*\n` +
@@ -136,7 +136,7 @@ async function startBot() {
         `👉 *De Avenida Tacna a Plaza Butters*\n` +
         `👉 *Estoy en Av. Arequipa y quiero ir a Jr. Huallaga*\n` +
         `👉 *Miraflores a San Isidro con 5 soles*\n\n` +
-        `_Cyberon · Transporte resiliente en Lima_`;
+        `_Rutéalo · Transporte resiliente en Lima_`;
 
       await sock.sendMessage(remoteJid, { text: hint }, { quoted: msg });
     } catch (err) {

@@ -68,6 +68,7 @@ flutter:
     - assets/data/atu_sit_routes.json
     - assets/data/osm_stops.json
     - assets/data/corridor_candidates.json
+    - assets/images/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -250,10 +250,10 @@ async function planTrip(originText, destinationText, budgetSoles = 15.0) {
 // Formatear respuesta con los mismos estándares y tradeoffs de la app
 function formatWhatsAppResponse(plan) {
   if (!plan.success) {
-    return `❌ *Cyberon Informa*\n\n${plan.error}`;
+    return `❌ *Rutéalo Informa*\n\n${plan.error}`;
   }
 
-  let text = `🧭 *CYBERON — Opciones Estimadas*\n`;
+  let text = `🧭 *RUTÉALO — Opciones Estimadas*\n`;
   text += `📍 *Origen:* ${plan.origin}\n`;
   text += `🏁 *Destino:* ${plan.destination}\n`;
 
@@ -327,7 +327,7 @@ function formatWhatsAppResponse(plan) {
   }
 
   text += `───────────────────\n`;
-  text += `📱 _Cyberon · Movilidad Resiliente con Datos Abiertos de Lima_`;
+  text += `📱 _Rutéalo · Movilidad Resiliente con Datos Abiertos de Lima_`;
 
   return text;
 }

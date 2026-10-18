@@ -186,7 +186,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                   const SizedBox(height: 20),
                   const Text(
-                    'Cyberon no guarda trazas de tu ubicación. Los estados de tus viajes se registran manualmente.',
+                    'Rutéalo no guarda trazas de tu ubicación. Los estados de tus viajes se registran manualmente.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Palette.inkMuted, fontSize: 12),
                   ),
@@ -300,7 +300,7 @@ class _Header extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        signedIn ? 'Cuenta Cyberon' : 'Modo invitado',
+                        signedIn ? 'Cuenta Rutéalo' : 'Modo invitado',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
@@ -627,7 +627,7 @@ class _NotificationSettings extends StatelessWidget {
                   messenger.showSnackBar(
                     const SnackBar(
                       content: Text(
-                        'Activa el permiso de notificaciones de Cyberon en los ajustes del teléfono.',
+                        'Activa el permiso de notificaciones de Rutéalo en los ajustes del teléfono.',
                       ),
                     ),
                   );

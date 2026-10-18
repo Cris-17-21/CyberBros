@@ -2,26 +2,22 @@ import 'package:flutter/material.dart';
 
 import '../theme/palette.dart';
 
-class CyberonBrand extends StatelessWidget {
-  const CyberonBrand({super.key, this.compact = false});
+class RutealoBrand extends StatelessWidget {
+  const RutealoBrand({super.key, this.compact = false});
 
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    final size = compact ? 42.0 : 54.0;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: compact ? 42 : 52,
-          height: compact ? 42 : 52,
+          width: size,
+          height: size,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Palette.primary, Color(0xFF0EA5E9)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(compact ? 12 : 16),
             boxShadow: [
               BoxShadow(
                 color: Palette.primary.withValues(alpha: 0.35),
@@ -30,10 +26,23 @@ class CyberonBrand extends StatelessWidget {
               ),
             ],
           ),
-          child: Icon(
-            Icons.route_rounded,
-            color: Colors.white,
-            size: compact ? 22 : 28,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(compact ? 12 : 16),
+            child: Image.asset(
+              'assets/images/rutealo_logo.png',
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Container(
+                color: Palette.primary,
+                alignment: Alignment.center,
+                child: Icon(
+                  Icons.alt_route_rounded,
+                  color: Colors.white,
+                  size: compact ? 22 : 28,
+                ),
+              ),
+            ),
           ),
         ),
         const SizedBox(width: 12),
@@ -45,21 +54,21 @@ class CyberonBrand extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'cyber',
+                  'Ruté',
                   style: TextStyle(
                     color: Palette.ink,
                     fontSize: compact ? 22 : 28,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: -1,
+                    letterSpacing: -0.8,
                   ),
                 ),
                 Text(
-                  'on',
+                  'alo',
                   style: TextStyle(
                     color: Palette.primary,
                     fontSize: compact ? 22 : 28,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: -1,
+                    letterSpacing: -0.8,
                   ),
                 ),
               ],
@@ -80,3 +89,6 @@ class CyberonBrand extends StatelessWidget {
     );
   }
 }
+
+/// Alias retrocompatible para imports existentes
+typedef CyberonBrand = RutealoBrand;
