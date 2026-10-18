@@ -36,6 +36,7 @@ class OsmStop {
 
 class OsmStopCatalog {
   const OsmStopCatalog._(this.stops);
+  const OsmStopCatalog.empty() : stops = const [];
 
   final List<OsmStop> stops;
 
@@ -67,13 +68,20 @@ class OsmStopCatalog {
 
   OsmStop? findById(String id) {
     final parts = id.split(':');
-    if (parts.length == 3 && (parts[0] == 'map' || parts[0] == 'location')) {
+    if (parts.length == 3 &&
+        (parts[0] == 'map' || parts[0] == 'location' || parts[0] == 'address')) {
       final lat = double.tryParse(parts[1]);
       final lon = double.tryParse(parts[2]);
       if (lat != null && lon != null && lat.abs() <= 90 && lon.abs() <= 180) {
-        return OsmStop.mapPoint(
-          LatLng(lat, lon),
-          currentLocation: parts[0] == 'location',
+        return OsmStop(
+          id: id,
+          point: LatLng(lat, lon),
+          name: parts[0] == 'address'
+              ? 'Dirección seleccionada'
+              : (parts[0] == 'location' ? 'Mi ubicación' : 'Punto en el mapa'),
+          source: parts[0] == 'address'
+              ? 'mapbox:geocoding'
+              : (parts[0] == 'location' ? 'device-location' : 'user-map-selection'),
         );
       }
     }

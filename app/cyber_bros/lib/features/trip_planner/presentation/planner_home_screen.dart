@@ -205,27 +205,50 @@ class _PlannerHomeScreenState extends State<PlannerHomeScreen> {
     });
   }
 
+  Future<List<OsmStop>> _searchStopsAndStreets(String query) async {
+    final clean = query.trim();
+    if (clean.length < 2) return const [];
+
+    final catalog = await _stops;
+    final stopMatches = catalog.search(clean, limit: 3);
+
+    final addressMatches =
+        await MapboxRoadService.searchAddresses(clean, limit: 4);
+
+    final combined = <OsmStop>[...stopMatches];
+    final seenNames =
+        stopMatches.map((s) => s.displayName.toLowerCase()).toSet();
+
+    for (final addr in addressMatches) {
+      if (!seenNames.contains(addr.displayName.toLowerCase())) {
+        combined.add(addr);
+      }
+    }
+
+    return combined;
+  }
+
   Widget _suggestions({required bool origin}) {
     final query = origin ? _originController.text : _destinationController.text;
     if (query.trim().length < 2 ||
         (origin ? _originStop : _destinationStop) != null) {
       return const SizedBox.shrink();
     }
-    return FutureBuilder<OsmStopCatalog>(
-      future: _stops,
+    return FutureBuilder<List<OsmStop>>(
+      future: _searchStopsAndStreets(query),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return const Padding(
             padding: EdgeInsets.all(8),
-            child: Text('No se pudieron cargar los lugares locales.'),
+            child: Text('No se pudieron buscar lugares.'),
           );
         }
         if (!snapshot.hasData) return const LinearProgressIndicator();
-        final matches = snapshot.data!.search(query, limit: 4);
+        final matches = snapshot.data!;
         if (matches.isEmpty) {
           return const Padding(
             padding: EdgeInsets.all(8),
-            child: Text('Sin coincidencias. Puedes explorar el mapa.'),
+            child: Text('Sin coincidencias de calles o paraderos en Lima.'),
           );
         }
         return Column(
@@ -233,13 +256,26 @@ class _PlannerHomeScreenState extends State<PlannerHomeScreen> {
             for (final stop in matches)
               ListTile(
                 dense: true,
-                leading: const Icon(Icons.location_on_outlined),
+                leading: Icon(
+                  stop.source == 'mapbox:geocoding'
+                      ? Icons.signpost_rounded
+                      : Icons.directions_bus_rounded,
+                  color: stop.source == 'mapbox:geocoding'
+                      ? Palette.primary
+                      : Palette.primaryDark,
+                ),
                 title: Text(
                   stop.displayName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
-                subtitle: const Text('Paradero OSM · operación no verificada'),
+                subtitle: Text(
+                  stop.source == 'mapbox:geocoding'
+                      ? 'Calle / Dirección en Lima'
+                      : 'Paradero oficial OSM',
+                  style: const TextStyle(fontSize: 12),
+                ),
                 onTap: () => _chooseStop(stop, origin: origin),
               ),
           ],

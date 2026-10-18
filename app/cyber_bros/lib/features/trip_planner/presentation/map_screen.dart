@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import '../../../core/theme/palette.dart';
 import '../data/atu_routes.dart';
 import '../data/osm_stops.dart';
+import '../data/mapbox_road_service.dart';
 import 'widgets/lima_map.dart';
 import 'widgets/journey_map_leg.dart';
 
@@ -103,6 +104,29 @@ class _MapScreenState extends State<MapScreen> {
     } finally {
       if (mounted) setState(() => _locating = false);
     }
+  }
+
+  Future<List<OsmStop>> _searchStopsAndStreets(String query) async {
+    final clean = query.trim();
+    if (clean.length < 2) return const [];
+
+    final catalog = await _stops;
+    final stopMatches = catalog.search(clean, limit: 3);
+
+    final addressMatches =
+        await MapboxRoadService.searchAddresses(clean, limit: 4);
+
+    final combined = <OsmStop>[...stopMatches];
+    final seenNames =
+        stopMatches.map((s) => s.displayName.toLowerCase()).toSet();
+
+    for (final addr in addressMatches) {
+      if (!seenNames.contains(addr.displayName.toLowerCase())) {
+        combined.add(addr);
+      }
+    }
+
+    return combined;
   }
 
   @override
@@ -231,27 +255,27 @@ class _MapScreenState extends State<MapScreen> {
               controller: _stopSearchController,
               onChanged: (query) => setState(() => _stopQuery = query),
               decoration: const InputDecoration(
-                labelText: 'Buscar paradero en OpenStreetMap',
+                labelText: 'Buscar calle, avenida o paradero en Lima',
                 prefixIcon: Icon(Icons.search_rounded),
                 border: OutlineInputBorder(),
               ),
             ),
           ),
           if (_stopQuery.trim().length >= 2)
-            FutureBuilder<OsmStopCatalog>(
-              future: _stops,
+            FutureBuilder<List<OsmStop>>(
+              future: _searchStopsAndStreets(_stopQuery),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return const Text(
-                    'No se pudo cargar el catálogo de paraderos OSM.',
+                    'No se pudieron cargar los lugares.',
                   );
                 }
                 if (!snapshot.hasData) return const LinearProgressIndicator();
-                final matches = snapshot.data!.search(_stopQuery, limit: 4);
+                final matches = snapshot.data!;
                 if (matches.isEmpty) {
                   return const Padding(
                     padding: EdgeInsets.all(8),
-                    child: Text('Sin coincidencias en los datos disponibles.'),
+                    child: Text('Sin coincidencias de calles o paraderos en Lima.'),
                   );
                 }
                 return SizedBox(
@@ -260,14 +284,27 @@ class _MapScreenState extends State<MapScreen> {
                     itemCount: matches.length,
                     itemBuilder: (context, index) {
                       final stop = matches[index];
+                      final isStreet = stop.source == 'mapbox:geocoding';
                       return ListTile(
                         dense: true,
+                        leading: Icon(
+                          isStreet
+                              ? Icons.signpost_rounded
+                              : Icons.directions_bus_rounded,
+                          color: isStreet ? Palette.primary : Palette.primaryDark,
+                        ),
                         title: Text(
                           stop.displayName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
-                        subtitle: const Text('OSM · operación no verificada'),
+                        subtitle: Text(
+                          isStreet
+                              ? 'Calle / Dirección en Lima'
+                              : 'Paradero oficial OSM',
+                          style: const TextStyle(fontSize: 12),
+                        ),
                         onTap: () => setState(() {
                           _selectedStop = stop;
                           _stopQuery = '';
