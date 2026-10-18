@@ -430,8 +430,59 @@ final class PilotPlanner {
       );
     }
 
+    // Si no entró en los límites del usuario (condiciones extremas), crear alternativas ajustadas con aviso
     if (alternatives.isEmpty) {
-      return const InfeasiblePlan(InfeasibleReason.limitsExceeded);
+      if (allowShortTaxi) {
+        final taxiEdge = TravelEdge(
+          id: 'taxi:adjusted',
+          fromNodeId: startId,
+          toNodeId: finishId,
+          kind: EdgeKind.taxiBridge,
+          distanceMetres: directDistance,
+          durationMinutes: taxiMinutes,
+          costCents: taxiCents,
+          certainty: DataCertainty.estimated,
+          source: 'estimate:taxi-ajustado',
+        );
+        alternatives.add(
+          PlanAlternative(
+            label: 'Taxi referencial (excede tu presupuesto de S/ ${(limits.budgetCents / 100).toStringAsFixed(2)})',
+            edges: [taxiEdge],
+            costCents: taxiCents,
+            walkMetres: 0,
+            longestWalkMetres: 0,
+            durationMinutes: taxiMinutes,
+            transfers: 0,
+            hasEstimatedData: true,
+            hasCommunityData: false,
+          ),
+        );
+      }
+
+      final walkEdge = TravelEdge(
+        id: 'walk:adjusted',
+        fromNodeId: startId,
+        toNodeId: finishId,
+        kind: EdgeKind.walk,
+        distanceMetres: directDistance,
+        durationMinutes: walkMinutes,
+        costCents: 0,
+        certainty: DataCertainty.estimated,
+        source: 'estimate:caminata-ajustada',
+      );
+      alternatives.add(
+        PlanAlternative(
+          label: 'A pie (requiere caminar $directDistance m, límite era ${limits.maxTotalWalkMetres} m)',
+          edges: [walkEdge],
+          costCents: 0,
+          walkMetres: directDistance,
+          longestWalkMetres: directDistance,
+          durationMinutes: walkMinutes,
+          transfers: 0,
+          hasEstimatedData: true,
+          hasCommunityData: false,
+        ),
+      );
     }
 
     return FeasiblePlan(alternatives, degraded: true);

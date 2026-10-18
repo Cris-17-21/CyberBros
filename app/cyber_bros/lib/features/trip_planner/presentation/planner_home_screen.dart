@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -21,6 +22,7 @@ class PlannerHomeScreen extends StatefulWidget {
 class _PlannerHomeScreenState extends State<PlannerHomeScreen> {
   final _originController = TextEditingController();
   final _destinationController = TextEditingController();
+  final _mapController = MapController();
   late final Future<OsmStopCatalog> _stops = OsmStopCatalog.load();
   OsmStop? _originStop;
   OsmStop? _destinationStop;
@@ -30,6 +32,7 @@ class _PlannerHomeScreenState extends State<PlannerHomeScreen> {
   void dispose() {
     _originController.dispose();
     _destinationController.dispose();
+    _mapController.dispose();
     super.dispose();
   }
 
@@ -143,6 +146,24 @@ class _PlannerHomeScreenState extends State<PlannerHomeScreen> {
       }
     });
     FocusScope.of(context).unfocus();
+
+    // Mover la cámara del mapa al punto seleccionado suavemente
+    try {
+      if (_originStop != null && _destinationStop != null) {
+        final bounds = LatLngBounds.fromPoints([
+          _originStop!.point,
+          _destinationStop!.point,
+        ]);
+        _mapController.fitCamera(
+          CameraFit.bounds(
+            bounds: bounds,
+            padding: const EdgeInsets.fromLTRB(40, 40, 40, 220),
+          ),
+        );
+      } else {
+        _mapController.move(stop.point, 16.0);
+      }
+    } catch (_) {}
 
     // Si es un punto del mapa o coordenadas numéricas, resolver nombre de calle real con Mapbox
     if (stop.name == null ||
@@ -276,6 +297,7 @@ class _PlannerHomeScreenState extends State<PlannerHomeScreen> {
             child: LimaMap(
               height: double.infinity,
               borderRadius: 0,
+              mapController: _mapController,
               originPoint: _originStop?.point,
               destinationPoint: _destinationStop?.point,
               onTap: (point) {

@@ -270,10 +270,8 @@ class _PilotDetailScreenState extends State<_PilotDetailScreen> {
   }
 
   Future<void> _loadRoadGeometries() async {
-    final updatedLegs = <JourneyMapLeg>[];
-    bool hasUpdates = false;
-
-    for (final leg in _legs) {
+    // Ejecutar todas las llamadas de geometría en paralelo con Future.wait
+    final futures = _legs.map((leg) async {
       final mode = switch (leg.kind) {
         JourneyLegKind.walk => 'walking',
         JourneyLegKind.taxi || JourneyLegKind.bus => 'driving',
@@ -286,21 +284,21 @@ class _PilotDetailScreenState extends State<_PilotDetailScreen> {
           mode: mode,
         );
         if (roadPoints.length > 2) {
-          updatedLegs.add(JourneyMapLeg(
+          return JourneyMapLeg(
             leg.from,
             leg.to,
             leg.kind,
             points: roadPoints,
-          ));
-          hasUpdates = true;
-          continue;
+          );
         }
       } catch (_) {}
 
-      updatedLegs.add(leg);
-    }
+      return leg;
+    });
 
-    if (hasUpdates && mounted) {
+    final updatedLegs = await Future.wait(futures);
+
+    if (mounted) {
       setState(() {
         _legs = updatedLegs;
       });

@@ -26,6 +26,7 @@ class LimaMap extends StatelessWidget {
     this.originPoint,
     this.destinationPoint,
     this.onTap,
+    this.mapController,
   });
 
   final bool showDemoRoute;
@@ -37,6 +38,7 @@ class LimaMap extends StatelessWidget {
   final LatLng? originPoint;
   final LatLng? destinationPoint;
   final ValueChanged<LatLng>? onTap;
+  final MapController? mapController;
 
   static const _origin = LatLng(-12.0678, -77.0365);
   static const _transfer = LatLng(-12.0781, -77.0418);
@@ -72,13 +74,15 @@ class LimaMap extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(borderRadius),
         child: FlutterMap(
+          mapController: mapController,
           options: MapOptions(
             onTap: onTap == null ? null : (_, point) => onTap!(point),
             initialCenter:
+                originPoint ??
                 selectedStop?.point ??
                 (journeyPoints.isEmpty ? limaCenter : journeyPoints.first),
-            initialZoom: selectedStop != null
-                ? 16
+            initialZoom: (originPoint != null || selectedStop != null)
+                ? 15.5
                 : journeyPoints.isEmpty
                 ? 13.5
                 : 14,
@@ -120,6 +124,24 @@ class LimaMap extends StatelessWidget {
                         JourneyLegKind.taxi => Palette.taxi,
                       },
                       strokeWidth: leg.kind == JourneyLegKind.walk ? 4 : 5,
+                    ),
+                ],
+              ),
+            // Marcadores de origen y destino sueltos (en pantalla de inicio o selección)
+            if (journeyLegs.isEmpty && (originPoint != null || destinationPoint != null))
+              MarkerLayer(
+                markers: [
+                  if (originPoint != null)
+                    _mapMarker(
+                      point: originPoint!,
+                      color: Palette.primaryDark,
+                      icon: Icons.my_location_rounded,
+                    ),
+                  if (destinationPoint != null)
+                    _mapMarker(
+                      point: destinationPoint!,
+                      color: Palette.taxi,
+                      icon: Icons.flag_rounded,
                     ),
                 ],
               ),
