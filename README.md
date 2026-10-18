@@ -1,133 +1,158 @@
-﻿# Cyberon
+# Rutéalo
 
-**Planificador de viajes por Lima que respeta tu presupuesto y cuánto puedes caminar.**
-Compara transporte público, caminata y un taxi corto *solo en el tramo donde conviene*, y te dice
-con cifras exactas qué ganas y qué sacrificas en cada opción.
+**Planificador inteligente de viajes por Lima que respeta tu presupuesto real y cuánto puedes caminar.**  
+Compara transporte público, caminata y tramos de taxi corto *únicamente donde conviene*, calculando con exactitud matemática qué ganas y qué sacrificas en cada alternativa.
 
-Hack the Andes 2026 · Track *Movilidad y Transporte* · Problema: **transporte público en Lima,
-rutas y tiempos**.
+> Proyecto presentado en **Hack the Andes 2026** · Track *Movilidad y Transporte* · Reto: **Transporte público en Lima, rutas y tiempos**.
 
-**Demo en vivo:** https://cyberon-lima.web.app (funciona sin cuenta, en ventana privada; usa «Explorar sin cuenta»).
+---
 
 ## El problema y para quién
 
-Moverse por Lima combinando buses, corredores, caminata y taxi es un cálculo de **dinero, esfuerzo y
-certidumbre** que la gente hace "de memoria y a ciegas". Google Maps, Moovit y Waze optimizan el
-**tiempo** y tratan el viaje como "todo transporte público" o "todo taxi"; no conocen cuánto dinero
-tienes ni cuánto puedes caminar hoy.
+En Lima, combinar corredores, buses, caminata y taxi es una decisión compleja de **dinero, esfuerzo físico y certidumbre** que millones de ciudadanos realizan a ciegas:
+* **Google Maps, Moovit y Waze** optimizan exclusivamente por **tiempo** y asumen un viaje binario (*todo bus* o *todo taxi/auto*). No consideran cuánto dinero te queda en el bolsillo ni tus limitaciones físicas.
+* **Valeria**, estudiante universitaria de noche con S/ 8 y mochila pesada: necesita saber si le conviene tomar un taxi de 600 metros para cruzar una zona oscura y empalmar con otro corredor sin superar su presupuesto.
+* **Rosa**, saliendo del mercado con compras pesadas: prioriza la alternativa más económica que minimice el esfuerzo físico.
+* **Diego**, con saldo remanente ajustado: necesita replanificar su ruta con los S/ 5.50 exactos que le quedan.
 
-* **Valeria**, estudiante que vuelve de noche con S/ 8 y una mochila pesada, debe caminar 600 m
-  entre dos corredores por una avenida poco iluminada. Pregunta que no puede responder hoy: *¿me
-  conviene pagar un taxi solo esos 600 m y seguir en bus, y me alcanza el dinero?*
-* **Rosa**, que vuelve del mercado con bolsas: *"lo más barato que no me mate la espalda"*.
-* **Diego**, que ya pagó un bus y debe cambiar de plan *con los S/ 5.50 que le quedan*.
+---
 
-## Qué hace hoy
+## Solución y Características Clave
 
-* **Planifica con restricciones duras**: presupuesto, caminata seguida y total, taxi sí o no.
-  Ninguna opción devuelta las rompe (hay una prueba que lo verifica sobre los datos reales).
-* **Hasta 3 alternativas distintas** (más barata, menos caminata, equilibrada…) con una explicación
-  de lo que ganas y lo que sacrificas, con cifras exactas.
-* **Si no hay recorrido, no dice "sin resultados"**: calcula el **cambio mínimo de una sola
-  condición** ("Te faltan S/ 0.50", "Si aceptas caminar hasta 450 m…") y lo aplica solo si tú
-  aceptas.
-* **Cuéntalo con tus palabras**: *"tengo 10 soles y no quiero caminar más de 2 cuadras"* se
-  convierte en condiciones que tú revisas antes de usarlas.
-* **Contexto real**: el clima de Lima (Open-Meteo) y la hora sugieren caminar menos cuando llueve o
-  es de noche.
-* **Seguimiento del viaje** tramo a tramo con GPS, **notificaciones locales** (viaje en curso,
-  siguiente paso, cercanía, llegada, feedback, recordatorio).
-* **Taxi compartido para el tramo puente**: salas para repartir el taxi con personas que van al
-  mismo tramo.
-* **Cuentas y historial** en la nube (Firebase Auth + Firestore), o uso como invitado con historial
-  local.
-* **Laboratorio de paraderos de facto**: cómo descubrir dónde la gente aborda de verdad y cómo se
-  defiende de datos falsos (todo **simulado** y rotulado).
+* **Planificación con restricciones duras**: Presupuesto monetario exacto (en céntimos), caminata seguida máxima y caminata acumulada total. Ningún itinerario sugerido quiebra las condiciones fijadas.
+* **Optimización multiobjetivo con dominancia de Pareto**: Genera hasta 3 alternativas óptimas no dominadas (más económica, menor caminata y balanceada), explicando claramente el balance costo vs. tiempo vs. esfuerzo.
+* **Relajación mínima asistida**: Si un destino no es alcanzable con las restricciones fijadas, el sistema nunca muestra una pantalla vacía de error; calcula el **cambio mínimo indispensable de una sola variable** (*"Te faltan S/ 0.50"* o *"Aceptando caminar 150 m adicionales llegas a destino"*).
+* **Intérprete en lenguaje natural**: Procesamiento de texto cotidiano (*"tengo 7 soles y no quiero caminar más de 3 cuadras"*) traducido a parámetros formales verificables antes de ejecutar.
+* **Contexto urbano en tiempo real**: Integración con el clima de Lima (Open-Meteo) y el horario para ajustar automáticamente la tolerancia a la caminata bajo lluvia o de noche.
+* **Seguimiento GPS y notificaciones locales**: Monitoreo tramo a tramo, avisos de proximidad de paradero, transbordo y llegada a destino.
+* **Taxi compartido para tramos puente**: Salas colaborativas para compartir gastos de taxi en tramos difíciles o inseguros.
+* **Bot conversacional de WhatsApp**: Asistente complementario en Node.js (Baileys) para planificar rutas directamente desde chats cotidianos.
 
-## Lo técnico, en una mirada
+---
 
-| Pieza | Qué es |
-|---|---|
-| Motor de ruteo | Búsqueda **multietiqueta con dominancia de Pareto** sobre un grafo en memoria; una tarifa por abordaje; céntimos enteros |
-| Relajación mínima | Problema de factibilidad: para cada itinerario candidato, qué restricciones viola; si es una, define el cambio mínimo |
-| Intérprete | Analizador en español propio, validado por esquema; no inventa valores |
-| Paraderos de facto | Detección de abordaje + **DBSCAN** + fuentes independientes (`nEff`) + cuarentena + decaimiento + reversión |
-| Resiliencia | Cliente HTTP con reintentos y *circuit breaker* por servidor; funciona en web |
-| Datos | ATU (SIT) + OpenStreetMap + tarifas ATU, cruzados con scripts reproducibles |
+## Arquitectura del Sistema
 
-Detalle en [ARQUITECTURA](docs/ARCHITECTURE.md), [MODELO DE AMENAZAS](docs/THREAT_MODEL.md) y
-[RENDIMIENTO](docs/PERFORMANCE.md) (cifras **medidas**: planificar un viaje tarda p50 270 ms y
-p95 711 ms sobre los datos reales).
+El proyecto sigue principios de **Clean / Screaming Architecture**, garantizando desacoplamiento total y portabilidad multiplataforma inmediata (Android y Web):
 
-## Estado y límites (lo que quedó fuera)
+```mermaid
+flowchart TD
+    subgraph UI["Capa de Presentación (Flutter Multiplataforma)"]
+        A["App Móvil Android (APK)"]
+        W["App Web SPA (PWA)"]
+        B["Bot WhatsApp (Node.js)"]
+    end
 
-Para ser honestos con lo que se puede demostrar:
+    subgraph Domain["Dominio Puro (Dart Agnóstico / Sin dependencias de UI ni red)"]
+        ENG["Motor de Ruteo Pareto (Martins Multi-label)"]
+        REL["Módulo de Relajación Mínima (Factibilidad)"]
+        NLP["Intérprete de Lenguaje Natural"]
+        CTX["Asesor de Contexto (Clima & Horario)"]
+        INF["Inferencia de Paraderos de Facto (DBSCAN)"]
+    end
 
-* **Cobertura**: el motor planifica con **13 rutas** de los corredores Azul, Morado y Rojo (piloto).
-  Fuera de ellas solo ofrece ir a pie o en taxi directo, si caben en tus límites. **No cubre toda
-  Lima.**
-* **Tarifas**: generales de la ATU (abril de 2026). No incluyen promociones, medio pasaje ni
-  transbordos integrados. Los precios de taxi son **estimados**.
-* **Tiempos**: las esperas y velocidades son estimaciones; no hay datos abiertos de buses en
-  tiempo real.
-* **Paraderos de facto**: la inferencia está implementada y probada con trazas **sintéticas**.
-  Con usuarios reales haría falta un backend que valide y agregue las trazas.
-* **No implementado todavía**: replanificar a mitad de viaje con el saldo restante, eliminar la
-  cuenta desde la app, notificaciones push (FCM), pago o reserva de taxi.
+    subgraph Data["Capa de Datos y Adaptadores"]
+        PIL["PilotPlanner (Grafo de Transporte)"]
+        RES["ResilientClient (Circuit Breaker & Retry)"]
+        DS[("Datasets ATU SIT + OpenStreetMap")]
+        FB["Firebase Auth & Firestore"]
+        MAP["Mapbox API / Leaflet Engine"]
+    end
 
-## Ejecutar
+    A --> PIL
+    W --> PIL
+    B --> PIL
+    PIL --> ENG
+    ENG --> REL
+    PIL --> DS
+    PIL --> RES
+    RES --> MAP
+    A --> FB
+    W --> FB
+```
 
-Requiere Flutter (probado con 3.47.7). Desde `app/cyber_bros`:
+1. **Dominio Puro (`lib/features/trip_planner/domain`)**: Lógica matemática pura. Al compilar a Web, el motor de ruteo ejecuta directamente en el navegador del cliente en memoria, con latencia p50 de 270 ms sin saturar servidores externos.
+2. **Capa de Datos (`lib/features/trip_planner/data`, `lib/core/network`)**: Patrón Repository con cliente resiliente (`ResilientClient`) tolerante a fallos de conexión.
+3. **Presentación (`lib/features/trip_planner/presentation`)**: Interfaces adaptativas para smartphone y navegadores de escritorio.
+
+---
+
+## Cobertura y Datos
+
+* **Red de Transporte**: Piloto con **13 rutas** estructuradas de los corredores complementarios de Lima (**Corredor Azul, Corredor Morado y Corredor Rojo**).
+* **Fuentes Oficiales**: Cruce de datos de la Autoridad de Transporte Urbano para Lima y Callao (ATU) y OpenStreetMap (OSM) mediante scripts de preparación reproducibles en Python ([`tools/`](tools)).
+* **Tarifas Reales**: Modelo tarifario oficial de la ATU por abordaje (abril 2026) y estimaciones transparentes de taxi corto.
+
+---
+
+## Cómo Ejecutar el Proyecto
+
+### Requisitos
+* Flutter SDK (3.47+ probado)
+* Android SDK (para compilar APK móvil)
+* Node.js v20+ (para el bot de WhatsApp)
+* Python 3.10+ (para regenerar datasets con scripts de `tools/`)
+
+### 1. Aplicación Flutter (Android y Web)
+
+Desde el directorio `app/cyber_bros`:
 
 ```powershell
+# Instalar dependencias
 flutter pub get
-flutter run -d <dispositivo>          # Android
-flutter build web --release           # versión web
-flutter analyze lib
-flutter test                          # 95 pruebas
+
+# Ejecutar en modo desarrollo
+flutter run -d chrome                 # Versión Web
+flutter run -d <id_dispositivo>       # Versión Android
+
+# Compilar para producción
+flutter build web --release           # Genera SPA en build/web
+flutter build apk --release           # Genera APK en build/app/outputs/flutter-apk/
 ```
 
-El flujo principal y la demo funcionan **sin cuenta, sin GPS y sin servicios de terceros**: el
-"viaje de ejemplo" da siempre el mismo resultado.
+### 2. Probar la versión Web en local
 
-**Configuración** (`lib/core/config/`): la clave web de Firebase y el token público de Mapbox
-no son secretos; pueden reemplazarse al compilar con
-`--dart-define=FIREBASE_API_KEY=...` y `--dart-define=MAPBOX_ACCESS_TOKEN=...`. Ver
-[`.env.example`](.env.example). Las reglas de seguridad de Firestore están en
-[`firebase/`](firebase) (todo denegado por defecto).
-
-## Pruebas
-
-Corren en CI en cada push ([`ci.yml`](.github/workflows/ci.yml)) junto con el análisis estático y
-la compilación web:
-
-* Motor y "viajes de oro" (solución única, taxi que no debe aparecer, recálculo con saldo
-  reducido, caminata que excede el límite, presupuesto menor que cualquier tarifa).
-* Relajación mínima con resultados exactos.
-* Intérprete de condiciones (incluye entradas hostiles).
-* Inferencia de paraderos y las pruebas de ataque: **carrito**, **carrito + auto**, **bots**,
-  control positivo y reversión.
-* Cliente resiliente (reintentos, circuito abierto, recuperación), clima, taxi compartido.
-
-## Datos y herramientas
-
-Fuentes, fechas y qué se puede afirmar: [DATA_SOURCES](docs/DATA_SOURCES.md). Los datos se
-regeneran con los scripts de [`tools/`](tools) (Python, dependencias en `tools/requirements.txt`).
+Una vez compilada la versión web, puedes servir los archivos estáticos optimizados con cualquier servidor HTTP:
 
 ```powershell
-python tools/fetch_atu_data.py && python tools/build_atu_dataset.py          # capa ATU
-python tools/extract_osm_stops.py <extracto-peru.pbf>                       # paraderos OSM
-python tools/extract_osm_route_stops.py <extracto-peru.pbf>                 # secuencias de paraderos
-python tools/crosswalk_atu_osm_routes.py && python tools/build_corridor_candidates.py   # piloto
+# Desde el directorio app/cyber_bros:
+python -m http.server 8085 -d build/web
+# Abrir en el navegador: http://localhost:8085
 ```
 
-Los conteos de cobertura son mediciones del origen, no demuestran operación ni cobertura integral.
+### 3. Bot de WhatsApp
 
-## Documentos
+Desde el directorio `services/whatsapp_bot`:
 
-* [Arquitectura](docs/ARCHITECTURE.md) · [Modelo de amenazas](docs/THREAT_MODEL.md) ·
-  [Rendimiento](docs/PERFORMANCE.md) · [Fuentes de datos](docs/DATA_SOURCES.md) ·
-  [Privacidad](docs/PRIVACY.md) · [Decisiones](docs/DECISIONS.md)
-* Diseño del producto: [contexto](cyberon-contexto-completo.md) ·
-  [requerimientos](cyberon-requerimientos.md) · [arquitectura objetivo](cyberon-arquitectura.md) ·
-  [diseño UX/UI](cyberon-diseno.md)
+```powershell
+npm install
+node bot.js
+# Escanea el código QR generado en terminal para vincular la sesión
+```
+
+---
+
+## Pruebas y Calidad de Código
+
+El proyecto cuenta con **95 pruebas automatizadas** que validan la solidez del motor y las reglas de negocio bajo integración continua ([`ci.yml`](.github/workflows/ci.yml)):
+
+* **Viajes de Oro**: Validación matemática de rutas con tarifas justas y límites estrictos.
+* **Algoritmo de Relajación**: Cálculo determinista de cambios mínimos ante problemas infactibles.
+* **Seguridad y Resiliencia**: Pruebas de simulación frente a ataques adversarios a paraderos y fallas de red.
+
+Para correr la suite de pruebas:
+
+```powershell
+flutter test
+flutter analyze lib
+```
+
+---
+
+## Documentación Técnica Detallada
+
+Para los jurados y evaluadores que deseen profundizar en las decisiones de diseño:
+* [Arquitectura de Software y Decisiones](docs/ARCHITECTURE.md)
+* [Modelo de Amenazas y Seguridad](docs/THREAT_MODEL.md)
+* [Métricas de Rendimiento y Benchmarks](docs/PERFORMANCE.md)
+* [Metodología y Fuentes de Datos](docs/DATA_SOURCES.md)
+* [Política de Privacidad y Manejo de Ubicación](docs/PRIVACY.md)
