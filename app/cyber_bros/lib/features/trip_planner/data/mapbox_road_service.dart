@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:latlong2/latlong.dart';
 
 import '../../../core/config/mapbox_config.dart';
+import 'osm_stops.dart';
 
 /// Fetches turn-by-turn road geometry from Mapbox Directions API so routes follow streets.
 final class MapboxRoadService {
@@ -111,5 +112,67 @@ final class MapboxRoadService {
 
     final fallback = 'Punto (${point.latitude.toStringAsFixed(4)}, ${point.longitude.toStringAsFixed(4)})';
     return fallback;
+  }
+
+  // In-memory cache for address search queries
+  static final _searchCache = <String, List<OsmStop>>{};
+
+  /// Searches streets, avenues, and landmarks in Lima using Mapbox Places forward geocoding.
+  static Future<List<OsmStop>> searchAddresses(
+    String query, {
+    int limit = 5,
+  }) async {
+    final cleanQuery = query.trim();
+    if (cleanQuery.length < 2) return const [];
+
+    final cacheKey = cleanQuery.toLowerCase();
+    if (_searchCache.containsKey(cacheKey)) {
+      return _searchCache[cacheKey]!;
+    }
+
+    final url =
+        'https://api.mapbox.com/geocoding/v5/mapbox.places/'
+        '${Uri.encodeComponent(cleanQuery)}.json'
+        '?country=pe&bbox=-77.25,-12.35,-76.70,-11.70&proximity=-77.0369,-12.0464'
+        '&types=address,poi,neighborhood,locality,place&language=es&access_token=$_token';
+
+    try {
+      final request = await _httpClient.getUrl(Uri.parse(url));
+      final response = await request.close();
+      if (response.statusCode == 200) {
+        final body = await response.transform(utf8.decoder).join();
+        final data = jsonDecode(body) as Map<String, dynamic>;
+        final features = data['features'] as List<dynamic>?;
+        if (features != null && features.isNotEmpty) {
+          final results = <OsmStop>[];
+          for (final feature in features.take(limit)) {
+            final center = feature['center'] as List<dynamic>?;
+            final placeName = feature['place_name'] as String?;
+            if (center != null && center.length >= 2 && placeName != null) {
+              final lon = (center[0] as num).toDouble();
+              final lat = (center[1] as num).toDouble();
+              final parts = placeName.split(',');
+              final shortName = parts.length > 2
+                  ? '${parts[0].trim()}, ${parts[1].trim()}'
+                  : placeName;
+              results.add(
+                OsmStop(
+                  id: 'address:${lat.toStringAsFixed(6)}:${lon.toStringAsFixed(6)}',
+                  name: shortName,
+                  point: LatLng(lat, lon),
+                  source: 'mapbox:geocoding',
+                ),
+              );
+            }
+          }
+          if (results.isNotEmpty) {
+            _searchCache[cacheKey] = results;
+            return results;
+          }
+        }
+      }
+    } catch (_) {}
+
+    return const [];
   }
 }

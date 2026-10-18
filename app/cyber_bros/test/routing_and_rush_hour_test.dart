@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:cyber_bros/features/trip_planner/data/osm_stops.dart';
 import 'package:cyber_bros/features/trip_planner/data/pilot_planner.dart';
 import 'package:cyber_bros/features/trip_planner/domain/routing_engine.dart';
 
@@ -151,6 +152,15 @@ void main() {
 
       final enriched = LocalPlanner.enrichWithTradeoffs([walkAlt, busAlt]);
       expect(enriched[0].tradeoffText, contains('Ahorras S/ 2.50 de pasaje caminando ~7 cuadras (650 m)'));
+    });
+
+    test('OsmStopCatalog reconoce identificadores con prefijo address', () {
+      const catalog = OsmStopCatalog.empty();
+      final stop = catalog.findById('address:-12.091957:-77.033347');
+      expect(stop, isNotNull);
+      expect(stop!.point.latitude, closeTo(-12.091957, 0.00001));
+      expect(stop.point.longitude, closeTo(-77.033347, 0.00001));
+      expect(stop.source, equals('mapbox:geocoding'));
     });
   });
 }
