@@ -145,9 +145,74 @@ enum InfeasibleReason {
 }
 
 final class InfeasiblePlan extends PlanResult {
-  const InfeasiblePlan(this.reason);
+  const InfeasiblePlan(this.reason, {this.relaxations = const []});
 
   final InfeasibleReason reason;
+
+  /// Cambios mínimos de UNA restricción que harían factible el viaje (RF-10).
+  /// Vacío si ni relajando una sola condición existe un recorrido.
+  final List<Relaxation> relaxations;
+}
+
+/// Qué condición se relaja.
+enum RelaxationKind { budget, walk, taxi }
+
+/// Cambio mínimo en una sola restricción que haría factible un viaje, junto
+/// con un recorrido de muestra que lo demuestra (RF-10). Nunca se aplica sin
+/// que la persona lo acepte.
+final class Relaxation {
+  const Relaxation({
+    required this.kind,
+    required this.limits,
+    required this.preview,
+    this.deltaCents = 0,
+    this.deltaWalkMetres = 0,
+    this.taxiCents = 0,
+  });
+
+  final RelaxationKind kind;
+
+  /// Límites resultantes si la persona acepta este cambio.
+  final PlanLimits limits;
+
+  /// Un recorrido que cumple los límites relajados.
+  final PlanAlternative preview;
+
+  /// Cuánto más presupuesto hace falta (solo `budget`).
+  final int deltaCents;
+
+  /// Cuánta caminata seguida más hace falta (solo `walk`).
+  final int deltaWalkMetres;
+
+  /// Costo del taxi que se permitiría (solo `taxi`).
+  final int taxiCents;
+
+  /// Qué tan costoso es el cambio para la persona; menor es mejor. Mezcla
+  /// soles y metros con una equivalencia fija (100 m ≈ S/ 0.80).
+  double get effort => switch (kind) {
+    RelaxationKind.budget => deltaCents.toDouble(),
+    RelaxationKind.walk => deltaWalkMetres * 0.8,
+    RelaxationKind.taxi => 250.0,
+  };
+
+  String get title => switch (kind) {
+    RelaxationKind.budget => 'Subir tu presupuesto',
+    RelaxationKind.walk => 'Caminar un poco más',
+    RelaxationKind.taxi => 'Permitir un taxi',
+  };
+
+  /// Explicación en lenguaje llano con cifras exactas.
+  String get message {
+    String soles(int cents) => 'S/ ${(cents / 100).toStringAsFixed(2)}';
+    return switch (kind) {
+      RelaxationKind.budget =>
+        'Te faltan ${soles(deltaCents)}. Con ${soles(limits.budgetCents)} sí hay un recorrido.',
+      RelaxationKind.walk =>
+        'Si aceptas caminar hasta ${limits.maxContinuousWalkMetres} m seguidos (+$deltaWalkMetres m, unas ${(deltaWalkMetres / 100).ceil()} cuadras más), sí hay un recorrido.',
+      RelaxationKind.taxi =>
+        'Si permites un taxi corto en un tramo (~${soles(taxiCents)}), sí hay un recorrido.',
+    };
+  }
 }
 
 final class PlanAlternative {

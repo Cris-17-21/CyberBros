@@ -1,8 +1,9 @@
 import 'dart:convert';
-import 'dart:io';
+
 import 'package:latlong2/latlong.dart';
 
 import '../../../core/config/mapbox_config.dart';
+import '../../../core/network/resilient_client.dart';
 import 'osm_stops.dart';
 
 /// Fetches turn-by-turn road geometry from Mapbox Directions API so routes follow streets.
@@ -12,8 +13,9 @@ final class MapboxRoadService {
   // In-memory cache to avoid duplicate network roundtrips for the same segment
   static final _cache = <String, List<LatLng>>{};
 
-  // Shared HTTP client with connection pooling and keep-alive
-  static final _httpClient = HttpClient()..connectionTimeout = const Duration(seconds: 4);
+  // Cliente tolerante a fallos (reintentos + circuit breaker). Usa package:http,
+  // así que también funciona en web (dart:io no).
+  static final _http = ResilientClient.shared;
 
   /// Largo de una polilínea en metros.
   static double _lengthMetres(List<LatLng> points) {
@@ -53,14 +55,12 @@ final class MapboxRoadService {
         '?geometries=geojson&overview=full&access_token=$_token';
 
     try {
-      final request = await _httpClient.getUrl(Uri.parse(url));
-      final response = await request.close();
-      if (response.statusCode != 200) {
+      final response = await _http.get(Uri.parse(url));
+      if (response == null || response.statusCode != 200) {
         return [origin, destination];
       }
-      final responseBody = await response.transform(utf8.decoder).join();
 
-      final data = jsonDecode(responseBody) as Map<String, dynamic>;
+      final data = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
       final routes = data['routes'] as List<dynamic>?;
       if (routes == null || routes.isEmpty) {
         return [origin, destination];
@@ -119,11 +119,10 @@ final class MapboxRoadService {
         '?types=address,poi,neighborhood,locality&language=es&access_token=$_token';
 
     try {
-      final request = await _httpClient.getUrl(Uri.parse(url));
-      final response = await request.close();
-      if (response.statusCode == 200) {
-        final body = await response.transform(utf8.decoder).join();
-        final data = jsonDecode(body) as Map<String, dynamic>;
+      final response = await _http.get(Uri.parse(url));
+      if (response != null && response.statusCode == 200) {
+        final data =
+            jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
         final features = data['features'] as List<dynamic>?;
         if (features != null && features.isNotEmpty) {
           final placeName = features[0]['place_name'] as String?;
@@ -167,11 +166,10 @@ final class MapboxRoadService {
         '&types=address,poi,neighborhood,locality,place&language=es&access_token=$_token';
 
     try {
-      final request = await _httpClient.getUrl(Uri.parse(url));
-      final response = await request.close();
-      if (response.statusCode == 200) {
-        final body = await response.transform(utf8.decoder).join();
-        final data = jsonDecode(body) as Map<String, dynamic>;
+      final response = await _http.get(Uri.parse(url));
+      if (response != null && response.statusCode == 200) {
+        final data =
+            jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
         final features = data['features'] as List<dynamic>?;
         if (features != null && features.isNotEmpty) {
           final results = <OsmStop>[];

@@ -1,56 +1,131 @@
 # Cyberon
 
-Planificador multimodal para viajes en Lima. La app debe comparar transporte público, caminata y taxi puente según el presupuesto y los límites que el usuario fija para cada viaje.
+**Planificador de viajes por Lima que respeta tu presupuesto y cuánto puedes caminar.**
+Compara transporte público, caminata y un taxi corto *solo en el tramo donde conviene*, y te dice
+con cifras exactas qué ganas y qué sacrificas en cada opción.
 
-## Decisiones vigentes
+Hack the Andes 2026 · Track *Movilidad y Transporte* · Problema: **transporte público en Lima,
+rutas y tiempos**.
 
-- Cobertura objetivo: toda Lima. La cobertura anunciada debe basarse en la delimitación administrativa, los datos de transporte medidos y su calidad; no se afirmará hasta validar el dataset.
-- Cliente Flutter para Android y web. El motor se implementará como dominio Dart puro y local; Firebase será opcional para identidad, historial y tracción.
-- Zavu está incluido en el MVP mediante un backend de confianza; la clave nunca se guarda en Flutter.
-- El flujo principal y la demo funcionan sin cuenta, GPS ni servicios de terceros.
-- OpenStreetMap provee el mapa base. La vista web independiente usa Leaflet; Android usa Flutter Map. Ambos muestran atribución OSM. La capa cartográfica necesita conexión.
-- El mapa ya no se superpone a los formularios ni a las opciones. Las rutas dibujadas de demostración están marcadas `DEMO` y no representan transporte validado.
+## El problema y para quién
 
-## Estado del repositorio
+Moverse por Lima combinando buses, corredores, caminata y taxi es un cálculo de **dinero, esfuerzo y
+certidumbre** que la gente hace "de memoria y a ciegas". Google Maps, Moovit y Waze optimizan el
+**tiempo** y tratan el viaje como "todo transporte público" o "todo taxi"; no conocen cuánto dinero
+tienes ni cuánto puedes caminar hoy.
 
-La auditoría inicial de Overpass terminó sin conteos por errores del servicio (`data/reports/osm-lima-coverage.json`). Se incorporó una primera fuente oficial: el [geovisor de la ATU](https://geovisor.atumovilidad.pe/) publica 47 trazos direccionales SIT (enero de 2026). El proceso reproducible en `tools/fetch_atu_data.py` y `tools/build_atu_dataset.py` valida el archivo, genera el activo de Flutter y un informe de cobertura en `data/reports/atu-sit-coverage.json`. De 43 distritos referenciales de Lima, 30 contienen al menos 100 m de estos trazos. Esto mide solo las rutas concesionadas presentes en esa fuente y no demuestra cobertura integral de transporte ni capacidad de planificar viajes. El dataset no trae secuencia de paraderos, tarifas u horarios.
+* **Valeria**, estudiante que vuelve de noche con S/ 8 y una mochila pesada, debe caminar 600 m
+  entre dos corredores por una avenida poco iluminada. Pregunta que no puede responder hoy: *¿me
+  conviene pagar un taxi solo esos 600 m y seguir en bus, y me alcanza el dinero?*
+* **Rosa**, que vuelve del mercado con bolsas: *"lo más barato que no me mate la espalda"*.
+* **Diego**, que ya pagó un bus y debe cambiar de plan *con los S/ 5.50 que le quedan*.
 
-El estado de implementación y los siguientes cortes están en [`tasks/todo.md`](tasks/todo.md) y [`tasks/plan.md`](tasks/plan.md). La app Flutter está en `app/cyber_bros`.
+## Qué hace hoy
 
-## Mapa y app web
+* **Planifica con restricciones duras**: presupuesto, caminata seguida y total, taxi sí o no.
+  Ninguna opción devuelta las rompe (hay una prueba que lo verifica sobre los datos reales).
+* **Hasta 3 alternativas distintas** (más barata, menos caminata, equilibrada…) con una explicación
+  de lo que ganas y lo que sacrificas, con cifras exactas.
+* **Si no hay recorrido, no dice "sin resultados"**: calcula el **cambio mínimo de una sola
+  condición** ("Te faltan S/ 0.50", "Si aceptas caminar hasta 450 m…") y lo aplica solo si tú
+  aceptas.
+* **Cuéntalo con tus palabras**: *"tengo 10 soles y no quiero caminar más de 2 cuadras"* se
+  convierte en condiciones que tú revisas antes de usarlas.
+* **Contexto real**: el clima de Lima (Open-Meteo) y la hora sugieren caminar menos cuando llueve o
+  es de noche.
+* **Seguimiento del viaje** tramo a tramo con GPS, **notificaciones locales** (viaje en curso,
+  siguiente paso, cercanía, llegada, feedback, recordatorio).
+* **Taxi compartido para el tramo puente**: salas para repartir el taxi con personas que van al
+  mismo tramo.
+* **Cuentas y historial** en la nube (Firebase Auth + Firestore), o uso como invitado con historial
+  local.
+* **Laboratorio de paraderos de facto**: cómo descubrir dónde la gente aborda de verdad y cómo se
+  defiende de datos falsos (todo **simulado** y rotulado).
 
-- Flutter Web está habilitado. Leaflet 1.9.4 se carga desde el CDN público unpkg en la vista dedicada `web/leaflet_map.html`.
-- Android conserva `flutter_map` con teselas OSM; no requiere clave de Google Maps.
-- La vista de mapa permite seleccionar un trazo SIT publicado por ATU. La línea lleva atribución y fecha de los datos; no se usa todavía para calcular opciones de viaje.
-- La búsqueda local de paraderos usa 3 089 nodos etiquetados en OpenStreetMap dentro de un bbox provisional de Lima y Callao. El informe `data/reports/osm-stop-coverage.json` cuenta 2 910 nodos dentro de 38 de los 43 distritos referenciales de Lima. Son puntos colaborativos: su presencia no verifica operación ni pertenencia a una ruta.
-- Las tres alternativas ilustrativas aparecen únicamente al activar «Viaje de ejemplo». Al ingresar otros puntos, la app explica que aún no hay datos suficientes para calcular un itinerario verificable.
-- El formulario permite fijar origen y destino desde sugerencias OSM locales o desde la pantalla de mapa. El texto libre sin punto confirmado no avanza al cálculo; dos puntos a menos de 100 m se señalan como trayecto caminable. El ejemplo aplica límites de presupuesto y caminata antes de mostrar sus alternativas simuladas.
-- Al elegir una alternativa del piloto se guarda una copia fija en **Mis viajes**, con límites, tramos, fuentes y versión del dataset. El historial de invitado es local, se retiene hasta 30 días y puede borrarse por viaje; repetir recalcula con los datos actuales. Si el navegador bloquea el almacenamiento, el viaje permanece solo en memoria durante esa visita. Los botones de cuenta no simulan autenticación; todavía falta configurar un proveedor de identidad y sincronización.
-- Hay un **piloto de planificación estimada** para 13 relaciones OSM cuyos códigos de ruta y paraderos coinciden geométricamente con trazos oficiales ATU de los corredores Azul, Morado y Rojo. El motor local cobra en céntimos al abordar, respeta presupuesto y caminatas máximas, y muestra hasta tres alternativas con su incertidumbre. También considera caminata directa corta y un taxi puente estimado de hasta 1,8 km entre dos trayectos de transporte cuando el usuario lo permite. Usa tarifas generales publicadas por ATU en abril de 2026; descuentos, integración, tarjeta, operación y abordaje exacto deben confirmarse. No cubre toda Lima ni se presenta como navegación verificada.
-- La disponibilidad de mapas depende de la conexión y de las políticas del servidor de teselas. No hay geocodificación ni rutas de tránsito validadas todavía.
-- Ejecutar Android: `flutter run -d <dispositivo>` desde `app/cyber_bros`.
-- Compilar web: `flutter build web --release` desde `app/cyber_bros`.
+## Lo técnico, en una mirada
 
-## Ejecutar la auditoría inicial
+| Pieza | Qué es |
+|---|---|
+| Motor de ruteo | Búsqueda **multietiqueta con dominancia de Pareto** sobre un grafo en memoria; una tarifa por abordaje; céntimos enteros |
+| Relajación mínima | Problema de factibilidad: para cada itinerario candidato, qué restricciones viola; si es una, define el cambio mínimo |
+| Intérprete | Analizador en español propio, validado por esquema; no inventa valores |
+| Paraderos de facto | Detección de abordaje + **DBSCAN** + fuentes independientes (`nEff`) + cuarentena + decaimiento + reversión |
+| Resiliencia | Cliente HTTP con reintentos y *circuit breaker* por servidor; funciona en web |
+| Datos | ATU (SIT) + OpenStreetMap + tarifas ATU, cruzados con scripts reproducibles |
 
-Desde la raíz del repositorio:
+Detalle en [ARQUITECTURA](docs/ARCHITECTURE.md), [MODELO DE AMENAZAS](docs/THREAT_MODEL.md) y
+[RENDIMIENTO](docs/PERFORMANCE.md) (cifras **medidas**: planificar un viaje tarda p50 270 ms y
+p95 711 ms sobre los datos reales).
+
+## Estado y límites (lo que quedó fuera)
+
+Para ser honestos con lo que se puede demostrar:
+
+* **Cobertura**: el motor planifica con **13 rutas** de los corredores Azul, Morado y Rojo (piloto).
+  Fuera de ellas solo ofrece ir a pie o en taxi directo, si caben en tus límites. **No cubre toda
+  Lima.**
+* **Tarifas**: generales de la ATU (abril de 2026). No incluyen promociones, medio pasaje ni
+  transbordos integrados. Los precios de taxi son **estimados**.
+* **Tiempos**: las esperas y velocidades son estimaciones; no hay datos abiertos de buses en
+  tiempo real.
+* **Paraderos de facto**: la inferencia está implementada y probada con trazas **sintéticas**.
+  Con usuarios reales haría falta un backend que valide y agregue las trazas.
+* **No implementado todavía**: replanificar a mitad de viaje con el saldo restante, eliminar la
+  cuenta desde la app, notificaciones push (FCM), pago o reserva de taxi.
+
+## Ejecutar
+
+Requiere Flutter (probado con 3.47.7). Desde `app/cyber_bros`:
 
 ```powershell
-python tools/check_osm_coverage.py
+flutter pub get
+flutter run -d <dispositivo>          # Android
+flutter build web --release           # versión web
+flutter analyze lib
+flutter test                          # 95 pruebas
 ```
 
-El bbox de este auditor es provisional. Los conteos no demuestran geometría completa, orden de paradas, tarifas ni vigencia.
+El flujo principal y la demo funcionan **sin cuenta, sin GPS y sin servicios de terceros**: el
+"viaje de ejemplo" da siempre el mismo resultado.
 
-Para actualizar la capa ATU se necesita Python con las dependencias de `tools/requirements.txt`. Ejecute `python tools/fetch_atu_data.py` y después `python tools/build_atu_dataset.py`. Revise los términos de publicación del conjunto de datos antes de redistribuirlo públicamente.
+**Configuración** (`lib/core/config/`): la clave web de Firebase y el token público de Mapbox
+no son secretos; pueden reemplazarse al compilar con
+`--dart-define=FIREBASE_API_KEY=...` y `--dart-define=MAPBOX_ACCESS_TOKEN=...`. Ver
+[`.env.example`](.env.example). Las reglas de seguridad de Firestore están en
+[`firebase/`](firebase) (todo denegado por defecto).
 
-Para actualizar los puntos OSM se necesita el extracto PBF de Perú de Geofabrik y `osmium` de `tools/requirements.txt`. Ejecute `python tools/extract_osm_stops.py <ruta-al-pbf>` y `python tools/audit_osm_stop_coverage.py`. El archivo derivado conserva atribución OSM y referencia a sus nodos.
+## Pruebas
 
-Para rehacer el piloto, ejecute `python tools/extract_osm_route_stops.py <ruta-al-pbf>`, `python tools/crosswalk_atu_osm_routes.py` y `python tools/build_corridor_candidates.py`. El cruce usa los códigos de ruta y la distancia de los paraderos al trazo; su informe está en `data/reports/atu-osm-route-crosswalk.json`. Las tarifas generales y enlaces oficiales están versionados en `data/raw/atu/general_fares.json`.
+Corren en CI en cada push ([`ci.yml`](.github/workflows/ci.yml)) junto con el análisis estático y
+la compilación web:
+
+* Motor y "viajes de oro" (solución única, taxi que no debe aparecer, recálculo con saldo
+  reducido, caminata que excede el límite, presupuesto menor que cualquier tarifa).
+* Relajación mínima con resultados exactos.
+* Intérprete de condiciones (incluye entradas hostiles).
+* Inferencia de paraderos y las pruebas de ataque: **carrito**, **carrito + auto**, **bots**,
+  control positivo y reversión.
+* Cliente resiliente (reintentos, circuito abierto, recuperación), clima, taxi compartido.
+
+## Datos y herramientas
+
+Fuentes, fechas y qué se puede afirmar: [DATA_SOURCES](docs/DATA_SOURCES.md). Los datos se
+regeneran con los scripts de [`tools/`](tools) (Python, dependencias en `tools/requirements.txt`).
+
+```powershell
+python tools/fetch_atu_data.py && python tools/build_atu_dataset.py          # capa ATU
+python tools/extract_osm_stops.py <extracto-peru.pbf>                       # paraderos OSM
+python tools/extract_osm_route_stops.py <extracto-peru.pbf>                 # secuencias de paraderos
+python tools/crosswalk_atu_osm_routes.py && python tools/build_corridor_candidates.py   # piloto
+```
+
+Los conteos de cobertura son mediciones del origen, no demuestran operación ni cobertura integral.
 
 ## Documentos
 
-- [Contexto completo](cyberon-contexto-completo.md)
-- [Requerimientos](cyberon-requerimientos.md)
-- [Arquitectura](cyberon-arquitectura.md)
-- [Diseño UX/UI](cyberon-diseno.md)
-- [Decisiones vigentes](docs/DECISIONS.md)
+* [Arquitectura](docs/ARCHITECTURE.md) · [Modelo de amenazas](docs/THREAT_MODEL.md) ·
+  [Rendimiento](docs/PERFORMANCE.md) · [Fuentes de datos](docs/DATA_SOURCES.md) ·
+  [Privacidad](docs/PRIVACY.md) · [Decisiones](docs/DECISIONS.md)
+* Diseño del producto: [contexto](cyberon-contexto-completo.md) ·
+  [requerimientos](cyberon-requerimientos.md) · [arquitectura objetivo](cyberon-arquitectura.md) ·
+  [diseño UX/UI](cyberon-diseno.md)

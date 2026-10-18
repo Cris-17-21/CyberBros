@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../domain/relaxation.dart';
 import '../domain/routing_engine.dart';
 import 'osm_stops.dart';
 
@@ -213,36 +214,22 @@ final class PilotPlanner {
       edges: edges,
       planningReady: true,
     );
-    var result = await LocalPlanner(graph, maxExpandedLabels: 15000).plan(
-      PlanRequest(
-        originNodeId: startId,
-        destinationNodeId: finishId,
-        limits: limits,
-      ),
+    final planner = LocalPlanner(graph, maxExpandedLabels: 15000);
+    final request = PlanRequest(
+      originNodeId: startId,
+      destinationNodeId: finishId,
+      limits: limits,
     );
-
-    // Si no hubo solución factible O si la solución no incluye transporte público
-    // (por ejemplo, si el usuario puso las condiciones al mínimo y solo saldría caminar todo el trayecto):
-    final hasTransit = result is FeasiblePlan &&
-        result.alternatives.any(
-          (a) => a.edges.any(
-            (e) =>
-                e.kind == EdgeKind.board ||
-                e.kind == EdgeKind.ride ||
-                e.kind == EdgeKind.taxiBridge,
-          ),
-        );
-
-    if (result is InfeasiblePlan || !hasTransit) {
-      result = await _buildFallbackPlan(
-        graph: graph,
+    var result = await planner.plan(request);
+    if (result is InfeasiblePlan) {
+      result = await _resolveInfeasible(
+        planner: planner,
+        request: request,
         startId: startId,
         finishId: finishId,
         originPoint: origin.point,
         destinationPoint: destination.point,
-        limits: limits,
         taxiSpeed: taxiSpeedMetresPerMin,
-        strictPlan: result is FeasiblePlan ? result : null,
       );
     }
     return PilotPlanningResult(
@@ -429,109 +416,57 @@ final class PilotPlanner {
     }
   }
 
-  static Future<PlanResult> _buildFallbackPlan({
-    required RoutingGraph graph,
+  /// Cuando el grafo de corredores no encuentra recorrido solo se ofrecen las
+  /// alternativas directas (a pie o en taxi) que **sí cumplen** los límites de
+  /// la persona. Si tampoco hay, se calculan las relajaciones mínimas de una
+  /// sola condición (RF-10). Nunca se muestran opciones que violen lo que la
+  /// persona pidió.
+  static Future<PlanResult> _resolveInfeasible({
+    required LocalPlanner planner,
+    required PlanRequest request,
     required String startId,
     required String finishId,
     required LatLng originPoint,
     required LatLng destinationPoint,
-    required PlanLimits limits,
     int taxiSpeed = 350,
-    FeasiblePlan? strictPlan,
   }) async {
+    final limits = request.limits;
     final directDistance = _estimatedRoadMetres(originPoint, destinationPoint);
-    final walkMinutes = (directDistance / 75).ceil();
-    final alternatives = <PlanAlternative>[];
-
-    // 1. Incorporar opciones de la búsqueda estricta si existían
-    if (strictPlan != null) {
-      alternatives.addAll(strictPlan.alternatives);
-    }
-
-    // 2. Buscar opciones de transporte público (buses / corredores oficiales ATU y enlaces)
-    // relajando los límites para que SIEMPRE aparezcan las mejores opciones de transporte público
-    try {
-      final relaxedLimits = PlanLimits(
-        budgetCents: math.max(limits.budgetCents, 2500),
-        maxContinuousWalkMetres: math.max(limits.maxContinuousWalkMetres, 2200),
-        maxTotalWalkMetres: math.max(limits.maxTotalWalkMetres, 4500),
-        allowTaxiBridge: true,
-        priority: PlanPriority.savings,
+    final candidates = <PlanAlternative>[
+      PlanAlternative(
+        label: 'A pie (directo)',
+        edges: [
+          TravelEdge(
+            id: 'walk:fallback_direct',
+            fromNodeId: startId,
+            toNodeId: finishId,
+            kind: EdgeKind.walk,
+            distanceMetres: directDistance,
+            durationMinutes: (directDistance / 75).ceil(),
+            costCents: 0,
+            certainty: DataCertainty.estimated,
+            source: 'estimate:caminata-directa',
+          ),
+        ],
+        costCents: 0,
+        walkMetres: directDistance,
+        longestWalkMetres: directDistance,
+        durationMinutes: (directDistance / 75).ceil(),
+        transfers: 0,
+        hasEstimatedData: true,
+        hasCommunityData: false,
+      ),
+    ];
+    // Un taxi directo solo tiene sentido para trayectos que no son cortos.
+    if (directDistance >= 500) {
+      final taxiMinutes = math.max(5, (directDistance / taxiSpeed).ceil());
+      final taxiCents = estimateUberXCents(
+        distanceMetres: directDistance,
+        durationMinutes: taxiMinutes,
       );
-      final transitPlan = await LocalPlanner(
-        graph,
-        maxExpandedLabels: 15000,
-      ).plan(
-        PlanRequest(
-          originNodeId: startId,
-          destinationNodeId: finishId,
-          limits: relaxedLimits,
-        ),
-      );
-
-      if (transitPlan is FeasiblePlan && transitPlan.alternatives.isNotEmpty) {
-        for (final alt in transitPlan.alternatives) {
-          // Asegurar que use transporte público o taxi puente
-          final hasTransitOrBridge = alt.edges.any(
-            (e) =>
-                e.kind == EdgeKind.board ||
-                e.kind == EdgeKind.ride ||
-                e.kind == EdgeKind.taxiBridge,
-          );
-          if (!hasTransitOrBridge) continue;
-
-          final exceedsBudget = alt.costCents > limits.budgetCents;
-          final exceedsWalk =
-              alt.longestWalkMetres > limits.maxContinuousWalkMetres;
-          String label = alt.label;
-
-          if (exceedsBudget && exceedsWalk) {
-            label =
-                '${alt.label} (S/ ${(alt.costCents / 100).toStringAsFixed(2)} y ${alt.longestWalkMetres}m · excede condiciones)';
-          } else if (exceedsBudget) {
-            label =
-                '${alt.label} (S/ ${(alt.costCents / 100).toStringAsFixed(2)} · excede presupuesto de S/ ${(limits.budgetCents / 100).toStringAsFixed(2)})';
-          } else if (exceedsWalk) {
-            label =
-                '${alt.label} (Requiere caminar ${alt.longestWalkMetres} m · excede límite de ${limits.maxContinuousWalkMetres} m)';
-          }
-
-          alternatives.add(
-            PlanAlternative(
-              label: label,
-              edges: alt.edges,
-              costCents: alt.costCents,
-              walkMetres: alt.walkMetres,
-              longestWalkMetres: alt.longestWalkMetres,
-              durationMinutes: alt.durationMinutes,
-              transfers: alt.transfers,
-              hasEstimatedData: alt.hasEstimatedData,
-              hasCommunityData: alt.hasCommunityData,
-            ),
-          );
-        }
-      }
-    } catch (_) {}
-
-    // 3. Alternativa estimada de taxi UberX directo
-    final taxiMinutes = math.max(5, (directDistance / taxiSpeed).ceil());
-    final taxiCents = estimateUberXCents(
-      distanceMetres: directDistance,
-      durationMinutes: taxiMinutes,
-    );
-    final hasDirectTaxi = alternatives.any(
-      (a) => a.edges.length == 1 && a.edges.first.kind == EdgeKind.taxiBridge,
-    );
-
-    if (!hasDirectTaxi) {
-      final exceedsTaxi = taxiCents > limits.budgetCents;
-      final taxiLabel = exceedsTaxi
-          ? 'Taxi UberX estimado (~S/ ${(taxiCents / 100).toStringAsFixed(2)} · excede presupuesto de S/ ${(limits.budgetCents / 100).toStringAsFixed(2)})'
-          : 'Taxi UberX estimado';
-
-      alternatives.add(
+      candidates.add(
         PlanAlternative(
-          label: taxiLabel,
+          label: 'Taxi directo estimado',
           edges: [
             TravelEdge(
               id: 'taxi:fallback_direct',
@@ -556,95 +491,25 @@ final class PilotPlanner {
       );
     }
 
-    // 4. Alternativa 100% a pie (si no estaba ya en la lista)
-    final hasDirectWalk = alternatives.any(
-      (a) => a.edges.length == 1 && a.edges.first.kind == EdgeKind.walk,
+    final feasible = candidates
+        .where((alt) => violationsOf(alt, limits).count == 0)
+        .toList()
+      ..sort((a, b) => a.costCents.compareTo(b.costCents));
+    if (feasible.isNotEmpty) {
+      return FeasiblePlan(
+        LocalPlanner.enrichWithTradeoffs(feasible),
+        degraded: true,
+      );
+    }
+
+    final relaxations = await RelaxationAdvisor.suggest(
+      planner: planner,
+      request: request,
+      extraCandidates: candidates,
     );
-    if (!hasDirectWalk) {
-      final walkExceeds = directDistance > limits.maxTotalWalkMetres;
-      final walkLabel = walkExceeds
-          ? 'A pie (requiere caminar $directDistance m · excede límite de ${limits.maxTotalWalkMetres} m)'
-          : 'A pie (directo)';
-      alternatives.add(
-        PlanAlternative(
-          label: walkLabel,
-          edges: [
-            TravelEdge(
-              id: 'walk:fallback_direct',
-              fromNodeId: startId,
-              toNodeId: finishId,
-              kind: EdgeKind.walk,
-              distanceMetres: directDistance,
-              durationMinutes: walkMinutes,
-              costCents: 0,
-              certainty: DataCertainty.estimated,
-              source: 'estimate:caminata-directa',
-            ),
-          ],
-          costCents: 0,
-          walkMetres: directDistance,
-          longestWalkMetres: directDistance,
-          durationMinutes: walkMinutes,
-          transfers: 0,
-          hasEstimatedData: true,
-          hasCommunityData: false,
-        ),
-      );
-    }
-
-    // 5. Deduplicar opciones si difieren en muy pocos metros (<= 50m) con mismo costo y tiempo
-    final deduplicated = <PlanAlternative>[];
-    for (final alt in alternatives) {
-      final isDup = deduplicated.any((existing) {
-        final costDiff = (existing.costCents - alt.costCents).abs();
-        final walkDiff = (existing.walkMetres - alt.walkMetres).abs();
-        final timeDiff = (existing.durationMinutes - alt.durationMinutes).abs();
-        final transfersDiff = (existing.transfers - alt.transfers).abs();
-        return costDiff == 0 &&
-            transfersDiff == 0 &&
-            walkDiff <= 60 &&
-            timeDiff <= 3;
-      });
-      if (!isDup) {
-        deduplicated.add(alt);
-      }
-    }
-
-    // 6. Ordenar con criterio inteligente:
-    // Primero transporte público / corredor, luego enlaces taxi, luego taxi directo, y finalmente a pie
-    int priorityOrder(PlanAlternative alt) {
-      final isPureWalk = alt.edges.every((e) => e.kind == EdgeKind.walk);
-      final isDirectTaxi =
-          alt.edges.length == 1 && alt.edges.first.kind == EdgeKind.taxiBridge;
-      final hasBus = alt.edges.any(
-        (e) => e.kind == EdgeKind.board || e.kind == EdgeKind.ride,
-      );
-
-      if (hasBus && !alt.edges.any((e) => e.kind == EdgeKind.taxiBridge)) {
-        return 1; // Corredores directos primero
-      }
-      if (hasBus && alt.edges.any((e) => e.kind == EdgeKind.taxiBridge)) {
-        return 2; // Enlace multimodal taxi + corredor segundo
-      }
-      if (isDirectTaxi) {
-        return 3; // Taxi directo tercero
-      }
-      if (isPureWalk) {
-        return 4; // A pie al final
-      }
-      return 5;
-    }
-
-    deduplicated.sort((a, b) {
-      final pa = priorityOrder(a);
-      final pb = priorityOrder(b);
-      if (pa != pb) return pa.compareTo(pb);
-      return a.costCents.compareTo(b.costCents);
-    });
-
-    return FeasiblePlan(
-      LocalPlanner.enrichWithTradeoffs(deduplicated),
-      degraded: true,
+    return InfeasiblePlan(
+      InfeasibleReason.noConnection,
+      relaxations: relaxations,
     );
   }
 }

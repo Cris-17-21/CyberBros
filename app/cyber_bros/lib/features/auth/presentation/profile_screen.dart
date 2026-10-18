@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/notifications/notification_service.dart';
 import '../../../core/theme/palette.dart';
 import '../../trip_planner/data/guest_history.dart';
+import '../../trip_planner/presentation/stop_lab_screen.dart';
 import '../../trip_planner/presentation/trip_history_screen.dart';
 import '../data/auth_service.dart';
 import '../data/auth_session.dart';
@@ -140,6 +141,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _Section(
                     title: 'Atajos',
                     children: [
+                      _ActionTile(
+                        icon: Icons.science_outlined,
+                        label: 'Laboratorio: paraderos de facto (demo)',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const StopLabScreen(),
+                          ),
+                        ),
+                      ),
                       _ActionTile(
                         icon: Icons.directions_bus_outlined,
                         label: 'Mis viajes',

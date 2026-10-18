@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:cyber_bros/features/trip_planner/data/osm_stops.dart';
 import 'package:cyber_bros/features/trip_planner/data/pilot_planner.dart';
+import 'package:cyber_bros/features/trip_planner/domain/relaxation.dart';
 import 'package:cyber_bros/features/trip_planner/domain/routing_engine.dart';
 
 void main() {
@@ -164,7 +165,7 @@ void main() {
       expect(stop.source, equals('mapbox:geocoding'));
     });
 
-    test('PilotPlanner incluye opciones de corredor y taxi incluso con condiciones mínimas', () async {
+    test('PilotPlanner nunca devuelve opciones que violen los límites (RF-05)', () async {
       TestWidgetsFlutterBinding.ensureInitialized();
       final origin = OsmStop(
         id: 'address:-12.0712,-77.0425',
@@ -179,38 +180,79 @@ void main() {
         source: 'address',
       );
 
-      // Condiciones al mínimo (presupuesto S/ 1.00, caminata continua 100m)
+      // Se prueban varias combinaciones de límites sobre los datos reales de
+      // los corredores. Lo que se devuelva debe cumplirlos todos.
+      for (final budget in [100, 300, 800, 2000]) {
+        for (final walk in [100, 300, 600]) {
+          for (final taxi in [true, false]) {
+            final limits = PlanLimits(
+              budgetCents: budget,
+              maxContinuousWalkMetres: walk,
+              maxTotalWalkMetres: walk + 400,
+              allowTaxiBridge: taxi,
+            );
+            final res = await PilotPlanner.plan(
+              origin: origin,
+              destination: destination,
+              limits: limits,
+            );
+            final result = res.result;
+            if (result is FeasiblePlan) {
+              for (final alt in result.alternatives) {
+                final v = violationsOf(alt, limits);
+                expect(
+                  v.count,
+                  0,
+                  reason:
+                      'S/ ${budget / 100} · $walk m · taxi=$taxi: "${alt.label}" viola los límites',
+                );
+              }
+            }
+          }
+        }
+      }
+    });
+
+    test('con condiciones mínimas no hay ruta y se ofrece el cambio mínimo (RF-10)', () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      final origin = OsmStop(
+        id: 'address:-12.0712,-77.0425',
+        name: 'Av. Brasil, Jesús María',
+        point: const LatLng(-12.0712, -77.0425),
+        source: 'address',
+      );
+      final destination = OsmStop(
+        id: 'address:-12.0575,-77.0375',
+        name: 'Plaza Bolognesi, Lima',
+        point: const LatLng(-12.0575, -77.0375),
+        source: 'address',
+      );
+      const limits = PlanLimits(
+        budgetCents: 100, // S/ 1.00: menor que cualquier pasaje
+        maxContinuousWalkMetres: 100,
+        maxTotalWalkMetres: 200,
+        allowTaxiBridge: false,
+      );
       final res = await PilotPlanner.plan(
         origin: origin,
         destination: destination,
-        limits: const PlanLimits(
-          budgetCents: 100, // S/ 1.00 (menor a tarifa de bus de S/ 2.35)
-          maxContinuousWalkMetres: 100, // Menor a distancia normal de paraderos
-          maxTotalWalkMetres: 200,
-          allowTaxiBridge: true,
-        ),
+        limits: limits,
       );
-
-      expect(res.result, isA<FeasiblePlan>());
-      final plan = res.result as FeasiblePlan;
-      expect(plan.alternatives.length, greaterThanOrEqualTo(2));
-
-      // Debe incluir alternativas de transporte público
-      final hasTransit = plan.alternatives.any(
-        (a) => a.edges.any((e) => e.kind == EdgeKind.board || e.kind == EdgeKind.ride),
-      );
-      expect(hasTransit, isTrue, reason: 'Debe mostrar las opciones de corredor aunque excedan el presupuesto mínimo');
-
-      // Debe incluir taxi y caminata
-      final hasTaxi = plan.alternatives.any(
-        (a) => a.edges.any((e) => e.kind == EdgeKind.taxiBridge),
-      );
-      expect(hasTaxi, isTrue);
-
-      final hasWalk = plan.alternatives.any(
-        (a) => a.edges.any((e) => e.kind == EdgeKind.walk),
-      );
-      expect(hasWalk, isTrue);
+      expect(res.result, isA<InfeasiblePlan>());
+      final plan = res.result as InfeasiblePlan;
+      expect(plan.relaxations, isNotEmpty);
+      for (final r in plan.relaxations) {
+        // Cada propuesta cambia UNA sola condición y su recorrido de muestra
+        // cumple los límites ya relajados.
+        expect(violationsOf(r.preview, r.limits).count, 0);
+        final changed = [
+          r.limits.budgetCents != limits.budgetCents,
+          r.limits.maxContinuousWalkMetres != limits.maxContinuousWalkMetres ||
+              r.limits.maxTotalWalkMetres != limits.maxTotalWalkMetres,
+          r.limits.allowTaxiBridge != limits.allowTaxiBridge,
+        ].where((x) => x).length;
+        expect(changed, 1);
+      }
     });
   });
 }

@@ -1,0 +1,44 @@
+name: CI
+
+# Cada push y cada pull request corre el análisis estático y todas las pruebas
+# (motor, relajación, intérprete, inferencia de paraderos, tolerancia a fallos).
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  flutter:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app/cyber_bros
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Dependencias
+        run: flutter pub get
+
+      - name: Análisis estático
+        run: flutter analyze lib
+
+      - name: Pruebas
+        run: flutter test
+
+      - name: Compilar la versión web
+        run: flutter build web --release
+
+      - name: Buscar secretos en el repositorio
+        working-directory: .
+        run: |
+          # Falla si aparece una clave privada o un token de servicio.
+          if grep -rEn "(-----BEGIN (RSA |EC )?PRIVATE KEY-----|sk_live_|xox[baprs]-|AKIA[0-9A-Z]{16})" \
+              --include="*.dart" --include="*.json" --include="*.yml" --include="*.md" --include="*.html" . ; then
+            echo "Se encontró un posible secreto en el repositorio."; exit 1
+          fi
+          echo "Sin secretos evidentes."

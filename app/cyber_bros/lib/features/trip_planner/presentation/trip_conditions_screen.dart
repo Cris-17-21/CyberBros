@@ -5,9 +5,13 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../core/theme/palette.dart';
 import '../data/osm_stops.dart';
+import '../domain/condition_parser.dart';
+import '../domain/context_advisor.dart';
 import '../domain/routing_engine.dart';
 import 'pilot_options_screen.dart';
 import 'route_options_screen.dart';
+import 'widgets/context_banner.dart';
+import 'widgets/natural_language_card.dart';
 
 class TripConditionsScreen extends StatefulWidget {
   const TripConditionsScreen({
@@ -106,6 +110,79 @@ class _TripConditionsScreenState extends State<TripConditionsScreen> {
         : (current - step).clamp(0.50, 200.0);
     setState(() {
       _budgetController.text = next.toStringAsFixed(next % 1 == 0 ? 0 : 2);
+    });
+  }
+
+  /// Pasa a los controles lo que la persona confirmó del texto libre. Los
+  /// valores se ajustan a lo que permiten los controles y se avisa si hace
+  /// falta.
+  void _applyParsed(ParsedConditions parsed, Set<ConditionField> accepted) {
+    final notes = <String>[];
+    setState(() {
+      if (accepted.contains(ConditionField.budget) &&
+          parsed.budgetCents != null) {
+        final soles = parsed.budgetCents! / 100;
+        _budgetController.text = soles.toStringAsFixed(soles % 1 == 0 ? 0 : 2);
+      }
+      if (accepted.contains(ConditionField.continuousWalk) &&
+          parsed.maxContinuousWalkMetres != null) {
+        final metres = parsed.maxContinuousWalkMetres!;
+        final snapped = ((metres / 100).round() * 100).clamp(100, 800);
+        if (snapped != metres) {
+          notes.add('La caminata seguida se ajustó a $snapped m (el control va de 100 a 800 m).');
+        }
+        _walkingLimit = snapped.toDouble();
+        if (_totalWalkingLimit < _walkingLimit) _totalWalkingLimit = _walkingLimit;
+      }
+      if (accepted.contains(ConditionField.totalWalk) &&
+          parsed.maxTotalWalkMetres != null) {
+        final snapped = ((parsed.maxTotalWalkMetres! / 50).round() * 50)
+            .clamp(_walkingLimit.round(), 2000);
+        _totalWalkingLimit = snapped.toDouble();
+      }
+      if (accepted.contains(ConditionField.allowTaxi) &&
+          parsed.allowTaxi != null) {
+        _allowTaxi = parsed.allowTaxi!;
+      }
+      if (accepted.contains(ConditionField.priority) &&
+          parsed.priority != null) {
+        _priority = switch (parsed.priority!) {
+          PlanPriority.savings => 'Ahorro',
+          PlanPriority.lessWalking => 'Menos caminata',
+          PlanPriority.time => 'Tiempo',
+          PlanPriority.fewerTransfers => 'Menos transbordos',
+          PlanPriority.balanced => 'Menos caminata',
+        };
+      }
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          notes.isEmpty
+              ? 'Listo: revisa los controles y pulsa Ver opciones.'
+              : notes.join(' '),
+        ),
+      ),
+    );
+  }
+
+  /// Límites actuales según los controles (para calcular sugerencias).
+  PlanLimits _currentLimits() => PlanLimits(
+    budgetCents: ((double.tryParse(_budgetController.text.replaceAll(',', '.')) ?? 8) * 100).round(),
+    maxContinuousWalkMetres: _walkingLimit.round(),
+    maxTotalWalkMetres: _totalWalkingLimit.round(),
+    allowTaxiBridge: _allowTaxi,
+  );
+
+  /// La persona aceptó una sugerencia de clima u hora: se aplica a la caminata.
+  void _applyContext(ContextSuggestion suggestion) {
+    setState(() {
+      _walkingLimit = suggestion.limits.maxContinuousWalkMetres
+          .toDouble()
+          .clamp(100, 800);
+      _totalWalkingLimit = suggestion.limits.maxTotalWalkMetres
+          .toDouble()
+          .clamp(_walkingLimit, 2000);
     });
   }
 
@@ -219,6 +296,13 @@ class _TripConditionsScreenState extends State<TripConditionsScreen> {
             ),
           ),
           const SizedBox(height: 14),
+          NaturalLanguageCard(onApply: _applyParsed),
+          const SizedBox(height: 14),
+          ContextBanner(
+            point: widget.originStop?.point ?? const LatLng(-12.0464, -77.0428),
+            limits: _currentLimits(),
+            onApply: _applyContext,
+          ),
           _ConditionCard(
             title: '¿Cuánto puedes gastar?',
             icon: Icons.payments_outlined,

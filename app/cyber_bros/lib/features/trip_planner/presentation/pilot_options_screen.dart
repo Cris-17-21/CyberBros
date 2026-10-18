@@ -32,11 +32,22 @@ class PilotOptionsScreen extends StatefulWidget {
 
 class _PilotOptionsScreenState extends State<PilotOptionsScreen> {
   bool _savingSelection = false;
-  late final Future<PilotPlanningResult> _planning = PilotPlanner.plan(
+  late PlanLimits _limits = widget.limits;
+  late Future<PilotPlanningResult> _planning = _plan();
+
+  Future<PilotPlanningResult> _plan() => PilotPlanner.plan(
     origin: widget.origin,
     destination: widget.destination,
-    limits: widget.limits,
+    limits: _limits,
   );
+
+  /// Aplica un cambio propuesto (solo si la persona lo acepta) y recalcula.
+  void _applyRelaxation(Relaxation relaxation) {
+    setState(() {
+      _limits = relaxation.limits;
+      _planning = _plan();
+    });
+  }
 
   Future<void> _select(
     PlanAlternative alternative,
@@ -47,7 +58,7 @@ class _PilotOptionsScreenState extends State<PilotOptionsScreen> {
     final trip = GuestTripSnapshot.fromPlan(
       origin: widget.origin,
       destination: widget.destination,
-      limits: widget.limits,
+      limits: _limits,
       alternative: alternative,
       pilot: pilot,
     );
@@ -103,12 +114,7 @@ class _PilotOptionsScreenState extends State<PilotOptionsScreen> {
           final pilot = snapshot.data!;
           final result = pilot.result;
           if (result is InfeasiblePlan) {
-            return _message(
-              context,
-              result.reason == InfeasibleReason.noConnection
-                  ? 'No encontramos una conexión en las rutas piloto que cumpla tus límites. El catálogo aún no cubre toda Lima.'
-                  : 'No se puede calcular este viaje con los datos disponibles.',
-            );
+            return _infeasible(context, result);
           }
           final alternatives = (result as FeasiblePlan).alternatives;
           return Center(
@@ -315,6 +321,60 @@ class _PilotOptionsScreenState extends State<PilotOptionsScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  /// Sin recorrido que cumpla los límites: explica qué condición lo impide y
+  /// ofrece el cambio mínimo de UNA sola, que se aplica solo si la persona lo
+  /// acepta (RF-10).
+  Widget _infeasible(BuildContext context, InfeasiblePlan plan) {
+    if (plan.reason != InfeasibleReason.noConnection) {
+      return _message(
+        context,
+        'No se puede calcular este viaje con los datos disponibles.',
+      );
+    }
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            const SizedBox(height: 8),
+            const Icon(Icons.alt_route_rounded, size: 44, color: Palette.primary),
+            const SizedBox(height: 12),
+            const Text(
+              'Con tus límites no hay un recorrido',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Palette.ink,
+                fontSize: 21,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.4,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              plan.relaxations.isEmpty
+                  ? 'Ni cambiando una sola condición encontramos uno con los datos actuales. Prueba con otro origen o destino.'
+                  : 'Pero cambiando solo una condición sí se puede. Tú decides si aceptas:',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Palette.inkMuted, height: 1.35),
+            ),
+            const SizedBox(height: 18),
+            for (final relaxation in plan.relaxations)
+              _RelaxationCard(
+                relaxation: relaxation,
+                onApply: () => _applyRelaxation(relaxation),
+              ),
+            const SizedBox(height: 8),
+            OutlinedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Mantener mis límites y ajustar'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -715,6 +775,81 @@ class _PilotDetailScreenState extends State<_PilotDetailScreen> {
                 ),
               );
             },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RelaxationCard extends StatelessWidget {
+  const _RelaxationCard({required this.relaxation, required this.onApply});
+
+  final Relaxation relaxation;
+  final VoidCallback onApply;
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = switch (relaxation.kind) {
+      RelaxationKind.budget => Icons.payments_outlined,
+      RelaxationKind.walk => Icons.directions_walk_rounded,
+      RelaxationKind.taxi => Icons.local_taxi_rounded,
+    };
+    final color = switch (relaxation.kind) {
+      RelaxationKind.budget => Palette.estimated,
+      RelaxationKind.walk => Palette.walk,
+      RelaxationKind.taxi => Palette.taxi,
+    };
+    final preview = relaxation.preview;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Palette.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Palette.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: color.withValues(alpha: 0.14),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  relaxation.title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                    color: Palette.ink,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            relaxation.message,
+            style: const TextStyle(color: Palette.ink, height: 1.35),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Recorrido de muestra: S/ ${(preview.costCents / 100).toStringAsFixed(2)} · ${preview.walkMetres} m a pie · ~${preview.durationMinutes} min',
+            style: const TextStyle(color: Palette.inkMuted, fontSize: 12.5),
+          ),
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: onApply,
+            style: FilledButton.styleFrom(
+              backgroundColor: color,
+              minimumSize: const Size.fromHeight(48),
+            ),
+            child: const Text('Aceptar este cambio y recalcular'),
           ),
         ],
       ),
