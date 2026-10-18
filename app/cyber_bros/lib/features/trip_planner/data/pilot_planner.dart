@@ -228,6 +228,35 @@ final class PilotPlanner {
   static int _estimatedRoadMetres(LatLng first, LatLng second) =>
       (const Distance().as(LengthUnit.Meter, first, second) * 1.3).round();
 
+  /// Modelo oficial de tarificación UberX Lima:
+  /// - Tarifa mínima de servicio: S/ 8.50 (850 centavos)
+  /// - Tarifa base (pickup): S/ 3.80 (380 centavos)
+  /// - Tarifa kilométrica: S/ 1.45/km (145 centavos/km)
+  /// - Tarifa por tiempo: S/ 0.28/min (28 centavos/minuto)
+  /// - Factor dinámico (Surge): 1.20x en hora pico de Lima (7-9 AM / 6-9 PM de lunes a viernes)
+  static int estimateUberXCents({
+    required int distanceMetres,
+    required int durationMinutes,
+  }) {
+    const minFareCents = 850;
+    const baseFareCents = 380;
+    const centsPerKm = 145;
+    const centsPerMinute = 28;
+
+    final rawCents = baseFareCents +
+        (centsPerKm * distanceMetres / 1000).round() +
+        (centsPerMinute * durationMinutes);
+
+    final now = DateTime.now().toUtc().subtract(const Duration(hours: 5));
+    final hour = now.hour;
+    final isWeekday = now.weekday >= DateTime.monday && now.weekday <= DateTime.friday;
+    final isRushHour = isWeekday && ((hour >= 7 && hour <= 9) || (hour >= 18 && hour <= 21));
+    final surge = isRushHour ? 1.20 : 1.0;
+
+    final finalCents = (rawCents * surge).round();
+    return math.max(minFareCents, finalCents);
+  }
+
   static void _addTaxiBridges(
     Map<String, LatLng> stops,
     Map<String, Set<String>> stopRoutes,
@@ -257,10 +286,10 @@ final class PilotPlanner {
         return order == 0 ? a.id.compareTo(b.id) : order;
       });
       for (final target in nearby.take(maxDestinationsPerStop)) {
-        final minutes = math.max(1, (target.metres / 350).ceil());
-        final estimatedCents = math.max(
-          500,
-          (350 + 125 * target.metres / 1000 + 25 * minutes).round(),
+        final minutes = math.max(2, (target.metres / 350).ceil());
+        final estimatedCents = estimateUberXCents(
+          distanceMetres: target.metres,
+          durationMinutes: minutes,
         );
         if (estimatedCents > limits.budgetCents) continue;
         edges.add(
@@ -273,7 +302,7 @@ final class PilotPlanner {
             durationMinutes: minutes,
             costCents: estimatedCents,
             certainty: DataCertainty.estimated,
-            source: 'estimate:max(5.00,3.50+1.25/km+0.25/min)',
+            source: 'estimate:uberx-lima-formula',
           ),
         );
       }
@@ -312,9 +341,9 @@ final class PilotPlanner {
 
     for (final target in accessCandidates.take(3)) {
       final minutes = math.max(2, (target.metres / 350).ceil());
-      final estimatedCents = math.max(
-        500,
-        (350 + 125 * target.metres / 1000 + 25 * minutes).round(),
+      final estimatedCents = estimateUberXCents(
+        distanceMetres: target.metres,
+        durationMinutes: minutes,
       );
       if (estimatedCents > limits.budgetCents) continue;
       edges.add(
@@ -327,16 +356,16 @@ final class PilotPlanner {
           durationMinutes: minutes,
           costCents: estimatedCents,
           certainty: DataCertainty.estimated,
-          source: 'estimate:taxi-access-enlace',
+          source: 'estimate:uberx-lima-formula',
         ),
       );
     }
 
     for (final from in egressCandidates.take(3)) {
       final minutes = math.max(2, (from.metres / 350).ceil());
-      final estimatedCents = math.max(
-        500,
-        (350 + 125 * from.metres / 1000 + 25 * minutes).round(),
+      final estimatedCents = estimateUberXCents(
+        distanceMetres: from.metres,
+        durationMinutes: minutes,
       );
       if (estimatedCents > limits.budgetCents) continue;
       edges.add(
@@ -349,7 +378,7 @@ final class PilotPlanner {
           durationMinutes: minutes,
           costCents: estimatedCents,
           certainty: DataCertainty.estimated,
-          source: 'estimate:taxi-egress-enlace',
+          source: 'estimate:uberx-lima-formula',
         ),
       );
     }
@@ -448,17 +477,17 @@ final class PilotPlanner {
 
     // 3. Alternativa estimada de taxi / enlace (para viajes no triviales)
     final taxiMinutes = math.max(5, (directDistance / 350).ceil());
-    final taxiCents = math.max(
-      600,
-      (400 + 130 * directDistance / 1000 + 25 * taxiMinutes).round(),
+    final taxiCents = estimateUberXCents(
+      distanceMetres: directDistance,
+      durationMinutes: taxiMinutes,
     );
     final allowShortTaxi = directDistance >= 800 || alternatives.length <= 1;
 
     if (allowShortTaxi) {
       final exceedsTaxi = taxiCents > limits.budgetCents;
       final taxiLabel = exceedsTaxi
-          ? 'Taxi referencial (~S/ ${(taxiCents / 100).toStringAsFixed(2)} · excede presupuesto de S/ ${(limits.budgetCents / 100).toStringAsFixed(2)})'
-          : 'Taxi / enlace estimado';
+          ? 'Taxi UberX estimado (~S/ ${(taxiCents / 100).toStringAsFixed(2)} · excede presupuesto de S/ ${(limits.budgetCents / 100).toStringAsFixed(2)})'
+          : 'Taxi UberX estimado';
 
       alternatives.add(
         PlanAlternative(
@@ -473,7 +502,7 @@ final class PilotPlanner {
               durationMinutes: taxiMinutes,
               costCents: taxiCents,
               certainty: DataCertainty.estimated,
-              source: 'estimate:taxi-fallback',
+              source: 'estimate:uberx-lima-formula',
             ),
           ],
           costCents: taxiCents,

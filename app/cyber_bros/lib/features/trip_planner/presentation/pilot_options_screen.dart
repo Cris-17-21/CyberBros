@@ -179,7 +179,7 @@ class _PilotOptionsScreenState extends State<PilotOptionsScreen> {
                                         .fold<int>(0, (acc, e) => acc + e.costCents);
                                     final busCents = alternative.costCents - taxiCents;
                                     return Text(
-                                      'Incluye taxi enlace (~S/ ${(taxiCents / 100).toStringAsFixed(2)})'
+                                      'Incluye enlace UberX (~S/ ${(taxiCents / 100).toStringAsFixed(2)})'
                                       '${busCents > 0 ? ' + corredor (S/ ${(busCents / 100).toStringAsFixed(2)})' : ''}',
                                       style: const TextStyle(
                                         color: Palette.taxi,
