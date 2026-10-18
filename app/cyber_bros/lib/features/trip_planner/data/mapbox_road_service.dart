@@ -6,7 +6,7 @@ import '../../../core/config/mapbox_config.dart';
 
 /// Fetches turn-by-turn road geometry from Mapbox Directions API so routes follow streets.
 final class MapboxRoadService {
-  static const _token = MapboxConfig.token;
+  static String get _token => MapboxConfig.token;
 
   // In-memory cache to avoid duplicate network roundtrips for the same segment
   static final _cache = <String, List<LatLng>>{};
