@@ -5,6 +5,8 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../core/theme/palette.dart';
 import '../../../core/widgets/cyberon_brand.dart';
+import '../../auth/data/auth_service.dart';
+import '../../auth/presentation/login_screen.dart' show AuthSessionLabel;
 import '../data/osm_stops.dart';
 import '../data/mapbox_road_service.dart';
 import 'widgets/lima_map.dart';
@@ -279,14 +281,57 @@ class _PlannerHomeScreenState extends State<PlannerHomeScreen> {
               ),
             ),
           ),
-          IconButton(
-            tooltip: 'Cuenta',
-            onPressed: () => _showUnavailable('Cuenta'),
-            icon: const CircleAvatar(
-              radius: 18,
-              backgroundColor: Palette.primaryDark,
-              child: Icon(Icons.person_outline_rounded, color: Colors.white),
-            ),
+          ListenableBuilder(
+            listenable: AuthService.instance,
+            builder: (context, _) {
+              final session = AuthService.instance.session;
+              return PopupMenuButton<String>(
+                tooltip: 'Cuenta',
+                onSelected: (value) async {
+                  final navigator = Navigator.of(context);
+                  if (value == 'signout') {
+                    await AuthService.instance.signOut();
+                  }
+                  navigator.pushReplacementNamed('/login');
+                },
+                itemBuilder: (_) => session == null
+                    ? const [
+                        PopupMenuItem(
+                          value: 'signin',
+                          child: Text('Iniciar sesión o crear cuenta'),
+                        ),
+                      ]
+                    : [
+                        PopupMenuItem(
+                          enabled: false,
+                          child: Text(session.greeting),
+                        ),
+                        const PopupMenuItem(
+                          value: 'signout',
+                          child: Text('Cerrar sesión'),
+                        ),
+                      ],
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Palette.primaryDark,
+                    child: session == null
+                        ? const Icon(
+                            Icons.person_outline_rounded,
+                            color: Colors.white,
+                          )
+                        : Text(
+                            session.label.substring(0, 1).toUpperCase(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),

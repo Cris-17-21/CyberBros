@@ -1,0 +1,90 @@
+rules_version = '2';
+
+// Reglas de Cyberon (cyberon-arquitectura.md, sec. 8.4 · RNF-29).
+// Principio: todo denegado por defecto; solo se abre lo necesario.
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    function signedIn()   { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function untouched(keys) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(keys);
+    }
+    // Un contador solo puede subir 0 o 1 por escritura.
+    function step(k) {
+      return request.resource.data[k] - resource.data[k] >= 0
+          && request.resource.data[k] - resource.data[k] <= 1;
+    }
+
+    // Perfil privado: solo el dueño. El cliente nunca se marca como equipo.
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && request.resource.data.isTeamMember == false;
+      allow update: if isOwner(uid) && untouched(['isTeamMember', 'createdAt']);
+      allow delete: if isOwner(uid);
+
+      // Historial de viajes (RF-34): privado.
+      match /trips/{tripId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && request.resource.data.spentCents is int
+          && request.resource.data.spentCents >= 0
+          && request.resource.data.status in ['ACTIVE', 'COMPLETED', 'ABANDONED'];
+      }
+
+      // Incremento B (push FCM).
+      match /devices/{id} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+
+    // Tracción sin servidor (MVP). Limitación declarada: un cliente malicioso
+    // podría falsear sus propios contadores; el backend lo valida desde el
+    // Incremento A.
+    match /traction_users/{h} {
+      allow read: if true; // solo contadores y banderas, sin datos personales
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(
+          ['firstSeen', 'lastSeen', 'activeDays', 'trips', 'replans', 'completed', 'external', 'source']);
+      allow update: if signedIn()
+        && request.resource.data.keys().hasOnly(
+          ['firstSeen', 'lastSeen', 'activeDays', 'trips', 'replans', 'completed', 'external', 'source'])
+        && request.resource.data.firstSeen == resource.data.firstSeen
+        && request.resource.data.external == resource.data.external
+        && request.resource.data.source == resource.data.source
+        && step('activeDays') && step('trips') && step('replans') && step('completed');
+      allow delete: if false;
+    }
+
+    // Reportes de tarifa o paradero incorrectos (RF-14): solo creación.
+    match /reports/{id} {
+      allow create: if signedIn() && request.resource.data.text.size() <= 300;
+      allow read, update, delete: if false;
+    }
+
+    // Configuración pública; la escribe solo el equipo desde la consola.
+    match /config/{doc} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Incremento A/B: solo escribe el backend (cuenta de servicio).
+    match /inferred_stops/{id} {
+      allow read: if resource.data.status == 'VISIBLE';
+      allow write: if false;
+    }
+    match /alerts/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /telemetry_batches/{id} {
+      allow create: if signedIn() && request.resource.data.points.size() <= 200;
+      allow read, update, delete: if false;
+    }
+
+    // Por defecto, todo denegado.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
