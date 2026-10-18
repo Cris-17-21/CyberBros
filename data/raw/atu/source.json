@@ -1,0 +1,27 @@
+{
+  "publisher": "Autoridad de Transporte Urbano para Lima y Callao (ATU)",
+  "portal": "https://geovisor.atumovilidad.pe/",
+  "retrieved_at_utc": "2026-10-17T22:35:57.968335+00:00",
+  "portal_statement": "The geovisor states that SIT concession routes were updated in January 2026.",
+  "boundary_warning": "The geovisor describes its 2017 INEI census boundaries as referential, not official territorial limits.",
+  "files": [
+    {
+      "name": "sit_actual.geojson",
+      "url": "https://geovisor.atumovilidad.pe/data/sit_actual.geojson",
+      "sha256": "63454e39be77b97b29df621ba4ba70bb38a0534d45a2f71b10c2e59499528241",
+      "bytes": 934543,
+      "features": 47,
+      "http_last_modified": "Wed, 29 Apr 2026 14:56:19 GMT",
+      "content_type": "application/json"
+    },
+    {
+      "name": "distritos.geojson",
+      "url": "https://geovisor.atumovilidad.pe/data/distritos.geojson",
+      "sha256": "8fb7c2ec38d70753a52f74df17c5dd9bf5805d408a5c51bf3697de05b3cf58e9",
+      "bytes": 1139906,
+      "features": 50,
+      "http_last_modified": "Wed, 29 Apr 2026 14:56:09 GMT",
+      "content_type": "application/json"
+    }
+  ]
+}

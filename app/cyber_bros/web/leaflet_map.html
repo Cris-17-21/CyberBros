@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mapa de Lima · Cyberon</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <style>
+      html,
+      body,
+      #map {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        background: #f1eadf;
+      }
+
+      .leaflet-control-attribution {
+        font: 11px/1.35 Arial, sans-serif;
+      }
+
+      .map-message {
+        position: absolute;
+        z-index: 1000;
+        top: 12px;
+        left: 12px;
+        max-width: min(340px, calc(100vw - 56px));
+        padding: 9px 12px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.95);
+        color: #1b2433;
+        box-shadow: 0 2px 10px rgba(27, 36, 51, 0.12);
+        font: 13px/1.4 Arial, sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map" role="application" aria-label="Mapa interactivo de Lima"></div>
+    <div id="message" class="map-message" hidden></div>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script>
+      const center = [-12.0464, -77.0428];
+      const map = L.map('map', { zoomControl: true }).setView(center, 12);
+      const message = document.getElementById('message');
+
+      const mapboxToken = new URLSearchParams(window.location.search).get('mapboxToken') || '';
+      if (mapboxToken) {
+        L.tileLayer(
+          `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}@2x?access_token=${mapboxToken}`,
+          {
+            maxZoom: 22,
+            tileSize: 256,
+            zoomOffset: 0,
+            attribution:
+              '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          },
+        ).addTo(map);
+      } else {
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap',
+        }).addTo(map);
+      }
+
+      map.on('tileerror', () => {
+        message.textContent = 'No se pudieron cargar algunas teselas. Revisa tu conexión e inténtalo otra vez.';
+        message.hidden = false;
+      });
+
+      if (new URLSearchParams(window.location.search).get('demo') === '1') {
+        const sample = [
+          [-12.0678, -77.0365],
+          [-12.0781, -77.0418],
+          [-12.0865, -77.0454],
+        ];
+        const route = L.polyline(sample, {
+          color: '#1e4d7b',
+          weight: 5,
+          opacity: 0.9,
+          dashArray: '10 8',
+        }).addTo(map);
+
+        L.circleMarker(sample[0], {
+          radius: 8,
+          color: '#ffffff',
+          weight: 3,
+          fillColor: '#163a5c',
+          fillOpacity: 1,
+        }).addTo(map).bindTooltip('A · Origen de ejemplo');
+
+        L.circleMarker(sample[2], {
+          radius: 8,
+          color: '#ffffff',
+          weight: 3,
+          fillColor: '#b8452e',
+          fillOpacity: 1,
+        }).addTo(map).bindTooltip('B · Destino de ejemplo');
+
+        map.fitBounds(route.getBounds(), { padding: [36, 36] });
+      }
+
+      const routeId = new URLSearchParams(window.location.search).get('route');
+      if (routeId) {
+        fetch('assets/assets/data/atu_sit_routes.json')
+          .then((response) => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+          })
+          .then((catalog) => {
+            const selected = catalog.routes.find((route) => route.id === routeId);
+            if (!selected) throw new Error('La ruta no figura en el catálogo ATU.');
+            const lines = L.geoJSON(selected.geometry, {
+              style: { color: '#1e4d7b', weight: 4, opacity: 0.9 },
+            }).addTo(map);
+            lines.bindTooltip(selected.name);
+            if (!new URLSearchParams(window.location.search).has('stopLat')) {
+              map.fitBounds(lines.getBounds(), { padding: [24, 24] });
+            }
+            message.textContent = `${selected.name} · Trazo ATU, enero 2026. Sin paraderos ni tarifas.`;
+            message.hidden = false;
+          })
+          .catch(() => {
+            message.textContent = 'No se pudo mostrar el trazo de la ATU.';
+            message.hidden = false;
+          });
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token');
+      if (token) {
+        map.getContainer().style.cursor = 'crosshair';
+        map.on('click', (event) => {
+          window.parent.postMessage(JSON.stringify({
+            type: 'cyberon-map-tap', token,
+            lat: event.latlng.lat, lon: event.latlng.lng,
+          }), window.location.origin);
+        });
+      }
+      function markedPoint(latKey, lonKey, label, color) {
+        const lat = Number(params.get(latKey));
+        const lon = Number(params.get(lonKey));
+        if (params.has(latKey) && params.has(lonKey) &&
+            Number.isFinite(lat) && Number.isFinite(lon) &&
+            Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
+          L.circleMarker([lat, lon], {
+            radius: 9, color: '#ffffff', weight: 3,
+            fillColor: color, fillOpacity: 1,
+          }).addTo(map).bindTooltip(label);
+          return [lat, lon];
+        }
+        return null;
+      }
+      const originPoint = markedPoint('originLat', 'originLon', 'Origen', '#06345e');
+      const destinationPoint = markedPoint('destinationLat', 'destinationLon', 'Destino', '#b8452e');
+      if (originPoint && destinationPoint && !params.has('journey')) {
+        map.fitBounds([originPoint, destinationPoint], { padding: [32, 32] });
+      } else if (originPoint && !params.has('journey')) {
+        map.setView(originPoint, 15);
+      } else if (destinationPoint && !params.has('journey')) {
+        map.setView(destinationPoint, 15);
+      }
+      const journeyRaw = params.get('journey');
+      if (journeyRaw) {
+        try {
+          const legs = JSON.parse(journeyRaw);
+          const bounds = [];
+          const colors = { walk: '#59677b', bus: '#06345e', taxi: '#b8452e' };
+          if (!Array.isArray(legs) || legs.length > 300) throw new Error('Trayecto inválido');
+          for (const leg of legs) {
+            let points = [];
+            let kind = 'walk';
+            if (Array.isArray(leg) && leg.length === 5) {
+              points = [[leg[0], leg[1]], [leg[2], leg[3]]];
+              kind = leg[4];
+            } else if (leg && typeof leg === 'object') {
+              kind = leg.kind || 'walk';
+              if (Array.isArray(leg.points) && leg.points.length > 0) {
+                points = leg.points;
+              } else if (Array.isArray(leg.from) && Array.isArray(leg.to)) {
+                points = [leg.from, leg.to];
+              }
+            }
+            if (points.length < 2) continue;
+            const color = colors[kind] || '#59677b';
+            L.polyline(points, {
+              color: color,
+              weight: kind === 'walk' ? 4 : 5,
+              dashArray: kind === 'walk' ? '6 6' : undefined,
+            }).addTo(map);
+            bounds.push(...points);
+          }
+          if (bounds.length) {
+            L.circleMarker(bounds[0], { radius: 7, color: '#06345e' }).addTo(map).bindTooltip('Origen');
+            L.circleMarker(bounds[bounds.length - 1], { radius: 7, color: '#b8452e' }).addTo(map).bindTooltip('Destino');
+            map.fitBounds(bounds, { padding: [32, 32] });
+          }
+        } catch (_) {
+          message.textContent = 'No se pudo mostrar el trayecto elegido.';
+          message.hidden = false;
+        }
+      }
+      const stopLat = Number(params.get('stopLat'));
+      const stopLon = Number(params.get('stopLon'));
+      if (params.has('stopLat') && params.has('stopLon') && Number.isFinite(stopLat) && Number.isFinite(stopLon)) {
+        const stopName = params.get('stopName') || 'Paradero OSM';
+        L.marker([stopLat, stopLon]).addTo(map).bindPopup(stopName).openPopup();
+        if (!params.has('journey')) map.setView([stopLat, stopLon], 16);
+      }
+    </script>
+  </body>
+</html>

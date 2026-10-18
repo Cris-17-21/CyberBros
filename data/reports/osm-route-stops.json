@@ -1,0 +1,16 @@
+{
+  "route_relations_scanned_in_peru": 1480,
+  "tagged_stops_in_bbox": 3089,
+  "relations_with_at_least_two_ordered_tagged_stops_in_bbox": 95,
+  "mode_counts": {
+    "bus": 91,
+    "subway": 4
+  },
+  "total_ordered_stop_members": 2492,
+  "limitations": [
+    "OSM relation presence does not confirm current operation.",
+    "Only node members with stop/platform roles and tagged stop points in the bbox were included.",
+    "Relation member order may be incomplete or incorrect; no topology verification was performed.",
+    "No fares, schedules, boarding permissions, transfer policies, or route geometry were verified."
+  ]
+}

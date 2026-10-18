@@ -1,0 +1,290 @@
+{
+  "method": "same route ref and named service family, then stop-to-line distances in local equirectangular metres",
+  "thresholds_metres": {
+    "median": 70,
+    "p90": 150
+  },
+  "osm_relations_with_at_least_five_stops": 88,
+  "same_code_and_service_candidates": 13,
+  "plausible_geometry_matches": 13,
+  "without_same_code_service_candidate": [
+    "osm:relation:13392452",
+    "osm:relation:13572648",
+    "osm:relation:13703614",
+    "osm:relation:13704305",
+    "osm:relation:13704306",
+    "osm:relation:13740547",
+    "osm:relation:13744213",
+    "osm:relation:13756972",
+    "osm:relation:1408101",
+    "osm:relation:16812606",
+    "osm:relation:16861881",
+    "osm:relation:16861884",
+    "osm:relation:1963019",
+    "osm:relation:19701773",
+    "osm:relation:19922540",
+    "osm:relation:19922541",
+    "osm:relation:19922759",
+    "osm:relation:19924279",
+    "osm:relation:19926250",
+    "osm:relation:19930949",
+    "osm:relation:19931024",
+    "osm:relation:19931265",
+    "osm:relation:19931266",
+    "osm:relation:19934889",
+    "osm:relation:19935611",
+    "osm:relation:19935795",
+    "osm:relation:19938589",
+    "osm:relation:19938633",
+    "osm:relation:19943426",
+    "osm:relation:19947782",
+    "osm:relation:19948011",
+    "osm:relation:19948156",
+    "osm:relation:19950877",
+    "osm:relation:19950954",
+    "osm:relation:19969312",
+    "osm:relation:19971864",
+    "osm:relation:19973078",
+    "osm:relation:20125043",
+    "osm:relation:20128214",
+    "osm:relation:2051510",
+    "osm:relation:2071369",
+    "osm:relation:2071484",
+    "osm:relation:2113411",
+    "osm:relation:2113936",
+    "osm:relation:21478879",
+    "osm:relation:2217685",
+    "osm:relation:3658015",
+    "osm:relation:3658052",
+    "osm:relation:3708308",
+    "osm:relation:3708309",
+    "osm:relation:3708310",
+    "osm:relation:3708311",
+    "osm:relation:3708312",
+    "osm:relation:3708313",
+    "osm:relation:3708314",
+    "osm:relation:3708315",
+    "osm:relation:3708316",
+    "osm:relation:3708317",
+    "osm:relation:3708326",
+    "osm:relation:3708327",
+    "osm:relation:3708328",
+    "osm:relation:3710186",
+    "osm:relation:4080205",
+    "osm:relation:7727213",
+    "osm:relation:9107317",
+    "osm:relation:9107684",
+    "osm:relation:9109138",
+    "osm:relation:9110133",
+    "osm:relation:9110168",
+    "osm:relation:9465430",
+    "osm:relation:9465431",
+    "osm:relation:9726114",
+    "osm:relation:9726392",
+    "osm:relation:9726949",
+    "osm:relation:9726963"
+  ],
+  "matches": [
+    {
+      "osm_relation_id": "osm:relation:13394864",
+      "osm_name": "Corredor Morado 412",
+      "osm_ref": "412",
+      "best_candidate": {
+        "atu_route_id": "atu:sit:31",
+        "atu_name": "Corredor Morado 412",
+        "median_stop_to_line_metres": 9,
+        "p90_stop_to_line_metres": 29,
+        "within_100_metres": 98,
+        "stop_count": 102
+      },
+      "plausible_geometry": true,
+      "candidate_count": 3
+    },
+    {
+      "osm_relation_id": "osm:relation:13572816",
+      "osm_name": "Corredor Morado 405 → Javier Prado",
+      "osm_ref": "405",
+      "best_candidate": {
+        "atu_route_id": "atu:sit:33",
+        "atu_name": "Corredor Morado 405",
+        "median_stop_to_line_metres": 3,
+        "p90_stop_to_line_metres": 8,
+        "within_100_metres": 70,
+        "stop_count": 70
+      },
+      "plausible_geometry": true,
+      "candidate_count": 2
+    },
+    {
+      "osm_relation_id": "osm:relation:13677761",
+      "osm_name": "Corredor Morado 404 → La Virgen",
+      "osm_ref": "404",
+      "best_candidate": {
+        "atu_route_id": "atu:sit:35",
+        "atu_name": "Corredor Morado 404",
+        "median_stop_to_line_metres": 4,
+        "p90_stop_to_line_metres": 8,
+        "within_100_metres": 86,
+        "stop_count": 86
+      },
+      "plausible_geometry": true,
+      "candidate_count": 2
+    },
+    {
+      "osm_relation_id": "osm:relation:13677762",
+      "osm_name": "Corredor Morado 404 → La Capilla",
+      "osm_ref": "404",
+      "best_candidate": {
+        "atu_route_id": "atu:sit:36",
+        "atu_name": "Corredor Morado 404",
+        "median_stop_to_line_metres": 3,
+        "p90_stop_to_line_metres": 6,
+        "within_100_metres": 84,
+        "stop_count": 84
+      },
+      "plausible_geometry": true,
+      "candidate_count": 2
+    },
+    {
+      "osm_relation_id": "osm:relation:13683364",
+      "osm_name": "Corredor Morado 405 → La Capilla",
+      "osm_ref": "405",
+      "best_candidate": {
+        "atu_route_id": "atu:sit:34",
+        "atu_name": "Corredor Morado 405",
+        "median_stop_to_line_metres": 2,
+        "p90_stop_to_line_metres": 6,
+        "within_100_metres": 72,
+        "stop_count": 72
+      },
+      "plausible_geometry": true,
+      "candidate_count": 2
+    },
+    {
+      "osm_relation_id": "osm:relation:13690718",
+      "osm_name": "Corredor Azul 301 → Amancaes",
+      "osm_ref": "301",
+      "best_candidate": {
+        "atu_route_id": "atu:sit:14",
+        "atu_name": "Corredor Azul 301",
+        "median_stop_to_line_metres": 2,
+        "p90_stop_to_line_metres": 5,
+        "within_100_metres": 74,
+        "stop_count": 74
+      },
+      "plausible_geometry": true,
+      "candidate_count": 4
+    },
+    {
+      "osm_relation_id": "osm:relation:13698913",
+      "osm_name": "Corredor Azul 303 → Próceres",
+      "osm_ref": "303",
+      "best_candidate": {
+        "atu_route_id": "atu:sit:16",
+        "atu_name": "Corredor Azul 303",
+        "median_stop_to_line_metres": 3,
+        "p90_stop_to_line_metres": 6,
+        "within_100_metres": 32,
+        "stop_count": 32
+      },
+      "plausible_geometry": true,
+      "candidate_count": 2
+    },
+    {
+      "osm_relation_id": "osm:relation:13707077",
+      "osm_name": "Corredor Rojo 201 -> Ceres",
+      "osm_ref": "201",
+      "best_candidate": {
+        "atu_route_id": "atu:sit:2",
+        "atu_name": "Corredor Rojo 201",
+        "median_stop_to_line_metres": 3,
+        "p90_stop_to_line_metres": 7,
+        "within_100_metres": 72,
+        "stop_count": 72
+      },
+      "plausible_geometry": true,
+      "candidate_count": 2
+    },
+    {
+      "osm_relation_id": "osm:relation:13736330",
+      "osm_name": "Corredor Rojo 204 -> Víctor Malásquez",
+      "osm_ref": "204",
+      "best_candidate": {
+        "atu_route_id": "atu:sit:4",
+        "atu_name": "Corredor Rojo 204",
+        "median_stop_to_line_metres": 3,
+        "p90_stop_to_line_metres": 9,
+        "within_100_metres": 54,
+        "stop_count": 56
+      },
+      "plausible_geometry": true,
+      "candidate_count": 2
+    },
+    {
+      "osm_relation_id": "osm:relation:13736434",
+      "osm_name": "Corredor Rojo 204 -> Contisuyo",
+      "osm_ref": "204",
+      "best_candidate": {
+        "atu_route_id": "atu:sit:3",
+        "atu_name": "Corredor Rojo 204",
+        "median_stop_to_line_metres": 2,
+        "p90_stop_to_line_metres": 7,
+        "within_100_metres": 58,
+        "stop_count": 60
+      },
+      "plausible_geometry": true,
+      "candidate_count": 2
+    },
+    {
+      "osm_relation_id": "osm:relation:13924722",
+      "osm_name": "Corredor Rojo 206 -> Río Amarillo",
+      "osm_ref": "206",
+      "best_candidate": {
+        "atu_route_id": "atu:sit:6",
+        "atu_name": "Corredor Rojo 206",
+        "median_stop_to_line_metres": 3,
+        "p90_stop_to_line_metres": 7,
+        "within_100_metres": 67,
+        "stop_count": 67
+      },
+      "plausible_geometry": true,
+      "candidate_count": 2
+    },
+    {
+      "osm_relation_id": "osm:relation:3968387",
+      "osm_name": "Corredor Azul 301 → Plaza Butters",
+      "osm_ref": "301",
+      "best_candidate": {
+        "atu_route_id": "atu:sit:13",
+        "atu_name": "Corredor Azul 301",
+        "median_stop_to_line_metres": 3,
+        "p90_stop_to_line_metres": 7,
+        "within_100_metres": 77,
+        "stop_count": 77
+      },
+      "plausible_geometry": true,
+      "candidate_count": 4
+    },
+    {
+      "osm_relation_id": "osm:relation:3968388",
+      "osm_name": "Corredor Azul 303 → Dos de Mayo",
+      "osm_ref": "303",
+      "best_candidate": {
+        "atu_route_id": "atu:sit:15",
+        "atu_name": "Corredor Azul 303",
+        "median_stop_to_line_metres": 4,
+        "p90_stop_to_line_metres": 9,
+        "within_100_metres": 34,
+        "stop_count": 34
+      },
+      "plausible_geometry": true,
+      "candidate_count": 2
+    }
+  ],
+  "limitations": [
+    "An OSM stop near an ATU line does not prove that boarding is allowed there.",
+    "Direction, route validity, operating status, fares, and timetables remain unverified.",
+    "The local distance projection is an approximation suitable for data screening, not navigation.",
+    "Combining ATU and OSM data for public redistribution requires review of ATU terms and ODbL obligations."
+  ]
+}

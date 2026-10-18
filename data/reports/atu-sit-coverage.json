@@ -1,0 +1,221 @@
+{
+  "dataset_id": "atu-sit-2026-01-63454e39be77",
+  "source": {
+    "publisher": "Autoridad de Transporte Urbano para Lima y Callao (ATU)",
+    "url": "https://geovisor.atumovilidad.pe/data/sit_actual.geojson",
+    "portal": "https://geovisor.atumovilidad.pe/",
+    "retrieved_at_utc": "2026-10-17T22:35:57.968335+00:00",
+    "published_route_currency": "2026-01",
+    "http_last_modified": "Wed, 29 Apr 2026 14:56:19 GMT",
+    "raw_sha256": "63454e39be77b97b29df621ba4ba70bb38a0534d45a2f71b10c2e59499528241"
+  },
+  "boundary_source": "https://geovisor.atumovilidad.pe/data/distritos.geojson",
+  "boundary_warning": "The geovisor describes its 2017 INEI census boundaries as referential, not official territorial limits.",
+  "geometry": {
+    "directional_routes": 47,
+    "valid_directional_routes": 47,
+    "coordinate_points": 18559,
+    "service_counts": {
+      "Corredor Azul": 23,
+      "Corredor Morado": 11,
+      "Corredor Rojo": 8,
+      "Metro de Lima · Línea 1": 1,
+      "Metro de Lima · Línea 2": 1,
+      "Metropolitano": 3
+    },
+    "bbox_west_south_east_north": [
+      -77.119968,
+      -12.215238,
+      -76.868214,
+      -11.894543
+    ]
+  },
+  "districts": {
+    "lima_reference_count": 43,
+    "callao_reference_count": 7,
+    "threshold_route_metres": 100,
+    "lima_touched_by_published_sit_routes": [
+      {
+        "name": "ATE",
+        "published_route_metres": 18568
+      },
+      {
+        "name": "BARRANCO",
+        "published_route_metres": 7647
+      },
+      {
+        "name": "BREÑA",
+        "published_route_metres": 6584
+      },
+      {
+        "name": "CARABAYLLO",
+        "published_route_metres": 530
+      },
+      {
+        "name": "CHORRILLOS",
+        "published_route_metres": 3425
+      },
+      {
+        "name": "CIENEGUILLA",
+        "published_route_metres": 1934
+      },
+      {
+        "name": "COMAS",
+        "published_route_metres": 9448
+      },
+      {
+        "name": "EL AGUSTINO",
+        "published_route_metres": 1864
+      },
+      {
+        "name": "INDEPENDENCIA",
+        "published_route_metres": 3743
+      },
+      {
+        "name": "JESUS MARIA",
+        "published_route_metres": 7200
+      },
+      {
+        "name": "LA MOLINA",
+        "published_route_metres": 57984
+      },
+      {
+        "name": "LA VICTORIA",
+        "published_route_metres": 23180
+      },
+      {
+        "name": "LIMA",
+        "published_route_metres": 95915
+      },
+      {
+        "name": "LINCE",
+        "published_route_metres": 24275
+      },
+      {
+        "name": "MAGDALENA DEL MAR",
+        "published_route_metres": 8758
+      },
+      {
+        "name": "MIRAFLORES",
+        "published_route_metres": 33904
+      },
+      {
+        "name": "PACHACAMAC",
+        "published_route_metres": 13267
+      },
+      {
+        "name": "PUEBLO LIBRE",
+        "published_route_metres": 19704
+      },
+      {
+        "name": "RIMAC",
+        "published_route_metres": 80551
+      },
+      {
+        "name": "SAN BORJA",
+        "published_route_metres": 27188
+      },
+      {
+        "name": "SAN ISIDRO",
+        "published_route_metres": 57419
+      },
+      {
+        "name": "SAN JUAN DE LURIGANCHO",
+        "published_route_metres": 155825
+      },
+      {
+        "name": "SAN JUAN DE MIRAFLORES",
+        "published_route_metres": 3125
+      },
+      {
+        "name": "SAN MARTIN DE PORRES",
+        "published_route_metres": 9740
+      },
+      {
+        "name": "SAN MIGUEL",
+        "published_route_metres": 19551
+      },
+      {
+        "name": "SANTA ANITA",
+        "published_route_metres": 3144
+      },
+      {
+        "name": "SANTIAGO DE SURCO",
+        "published_route_metres": 16322
+      },
+      {
+        "name": "SURQUILLO",
+        "published_route_metres": 2156
+      },
+      {
+        "name": "VILLA EL SALVADOR",
+        "published_route_metres": 3866
+      },
+      {
+        "name": "VILLA MARIA DEL TRIUNFO",
+        "published_route_metres": 3058
+      }
+    ],
+    "lima_not_touched_by_published_sit_routes": [
+      {
+        "name": "ANCON",
+        "published_route_metres": 0
+      },
+      {
+        "name": "CHACLACAYO",
+        "published_route_metres": 0
+      },
+      {
+        "name": "LOS OLIVOS",
+        "published_route_metres": 0
+      },
+      {
+        "name": "LURIGANCHO",
+        "published_route_metres": 0
+      },
+      {
+        "name": "LURIN",
+        "published_route_metres": 0
+      },
+      {
+        "name": "PUCUSANA",
+        "published_route_metres": 0
+      },
+      {
+        "name": "PUENTE PIEDRA",
+        "published_route_metres": 0
+      },
+      {
+        "name": "PUNTA HERMOSA",
+        "published_route_metres": 0
+      },
+      {
+        "name": "PUNTA NEGRA",
+        "published_route_metres": 0
+      },
+      {
+        "name": "SAN BARTOLO",
+        "published_route_metres": 0
+      },
+      {
+        "name": "SAN LUIS",
+        "published_route_metres": 6
+      },
+      {
+        "name": "SANTA MARIA DEL MAR",
+        "published_route_metres": 0
+      },
+      {
+        "name": "SANTA ROSA",
+        "published_route_metres": 0
+      }
+    ]
+  },
+  "limitations": [
+    "These are ATU concession SIT route centerlines, not Lima's complete transport network.",
+    "The dataset has no stop sequence, fares, travel times or active-vehicle confirmation; it cannot support itinerary planning by itself.",
+    "The geovisor describes the 2017 INEI district polygons as reference census boundaries, not official territorial limits.",
+    "Route currency is January 2026 according to the ATU geovisor; it is not real-time data.",
+    "The geovisor page does not state a dataset-specific license; retain ATU attribution and confirm publication terms before redistribution."
+  ]
+}

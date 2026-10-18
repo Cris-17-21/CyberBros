@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "retrieved_at": "2026-10-17",
+  "fare_type": "general_base",
+  "warning": "Tarifas generales publicadas por ATU. Promociones, medios pasajes, transbordos integrados y requisitos de tarjeta pueden cambiar el pago exacto. Confirmar antes de viajar.",
+  "services": {
+    "Corredor Azul": {
+      "fare_cents": 245,
+      "source_date": "2026-04-20",
+      "source_url": "https://www.gob.pe/institucion/atu/noticias/1381183-atu-viaja-en-el-corredor-azul-ahorrando-dinero-con-sus-tarifas-promocionales-e-integradas"
+    },
+    "Corredor Morado": {
+      "fare_cents": 280,
+      "source_date": "2026-04-08",
+      "source_url": "https://www.gob.pe/institucion/atu/noticias/1376001-atu-ahorra-en-pasajes-con-las-tarifas-promocionales-e-integradas-del-corredor-morado"
+    },
+    "Corredor Rojo": {
+      "fare_cents": 243,
+      "source_date": "2026-04-17",
+      "source_url": "https://www.gob.pe/institucion/atu/noticias/1380627-atu-conoce-las-tarifas-promocionales-e-integradas-del-corredor-rojo-y-viaja-ahorrando-dinero"
+    }
+  }
+}

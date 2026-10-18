@@ -1,0 +1,197 @@
+{
+  "source": "OpenStreetMap via Geofabrik Peru extract",
+  "license": "ODbL 1.0",
+  "source_bbox_south_west_north_east": [
+    -12.35,
+    -77.2,
+    -11.7,
+    -76.65
+  ],
+  "reference_boundaries": "ATU geovisor / INEI 2017 census districts; not official territorial boundaries",
+  "total_tagged_nodes_in_bbox": 3089,
+  "lima_tagged_nodes": 2910,
+  "lima_reference_districts": 43,
+  "lima_reference_districts_with_tagged_nodes": 38,
+  "callao_tagged_nodes": 178,
+  "outside_reference_polygons": 1,
+  "lima_districts": [
+    {
+      "district": "ANCON",
+      "tagged_nodes": 15
+    },
+    {
+      "district": "ATE",
+      "tagged_nodes": 61
+    },
+    {
+      "district": "BARRANCO",
+      "tagged_nodes": 37
+    },
+    {
+      "district": "BREÑA",
+      "tagged_nodes": 17
+    },
+    {
+      "district": "CARABAYLLO",
+      "tagged_nodes": 131
+    },
+    {
+      "district": "CHACLACAYO",
+      "tagged_nodes": 6
+    },
+    {
+      "district": "CHORRILLOS",
+      "tagged_nodes": 93
+    },
+    {
+      "district": "CIENEGUILLA",
+      "tagged_nodes": 1
+    },
+    {
+      "district": "COMAS",
+      "tagged_nodes": 173
+    },
+    {
+      "district": "EL AGUSTINO",
+      "tagged_nodes": 26
+    },
+    {
+      "district": "INDEPENDENCIA",
+      "tagged_nodes": 189
+    },
+    {
+      "district": "JESUS MARIA",
+      "tagged_nodes": 14
+    },
+    {
+      "district": "LA MOLINA",
+      "tagged_nodes": 160
+    },
+    {
+      "district": "LA VICTORIA",
+      "tagged_nodes": 70
+    },
+    {
+      "district": "LIMA",
+      "tagged_nodes": 197
+    },
+    {
+      "district": "LINCE",
+      "tagged_nodes": 48
+    },
+    {
+      "district": "LOS OLIVOS",
+      "tagged_nodes": 148
+    },
+    {
+      "district": "LURIGANCHO",
+      "tagged_nodes": 38
+    },
+    {
+      "district": "LURIN",
+      "tagged_nodes": 15
+    },
+    {
+      "district": "MAGDALENA DEL MAR",
+      "tagged_nodes": 17
+    },
+    {
+      "district": "MIRAFLORES",
+      "tagged_nodes": 116
+    },
+    {
+      "district": "PACHACAMAC",
+      "tagged_nodes": 15
+    },
+    {
+      "district": "PUCUSANA",
+      "tagged_nodes": 0
+    },
+    {
+      "district": "PUEBLO LIBRE",
+      "tagged_nodes": 51
+    },
+    {
+      "district": "PUENTE PIEDRA",
+      "tagged_nodes": 53
+    },
+    {
+      "district": "PUNTA HERMOSA",
+      "tagged_nodes": 0
+    },
+    {
+      "district": "PUNTA NEGRA",
+      "tagged_nodes": 1
+    },
+    {
+      "district": "RIMAC",
+      "tagged_nodes": 115
+    },
+    {
+      "district": "SAN BARTOLO",
+      "tagged_nodes": 0
+    },
+    {
+      "district": "SAN BORJA",
+      "tagged_nodes": 75
+    },
+    {
+      "district": "SAN ISIDRO",
+      "tagged_nodes": 115
+    },
+    {
+      "district": "SAN JUAN DE LURIGANCHO",
+      "tagged_nodes": 356
+    },
+    {
+      "district": "SAN JUAN DE MIRAFLORES",
+      "tagged_nodes": 41
+    },
+    {
+      "district": "SAN LUIS",
+      "tagged_nodes": 10
+    },
+    {
+      "district": "SAN MARTIN DE PORRES",
+      "tagged_nodes": 157
+    },
+    {
+      "district": "SAN MIGUEL",
+      "tagged_nodes": 47
+    },
+    {
+      "district": "SANTA ANITA",
+      "tagged_nodes": 23
+    },
+    {
+      "district": "SANTA MARIA DEL MAR",
+      "tagged_nodes": 0
+    },
+    {
+      "district": "SANTA ROSA",
+      "tagged_nodes": 0
+    },
+    {
+      "district": "SANTIAGO DE SURCO",
+      "tagged_nodes": 88
+    },
+    {
+      "district": "SURQUILLO",
+      "tagged_nodes": 38
+    },
+    {
+      "district": "VILLA EL SALVADOR",
+      "tagged_nodes": 98
+    },
+    {
+      "district": "VILLA MARIA DEL TRIUNFO",
+      "tagged_nodes": 55
+    }
+  ],
+  "limitations": [
+    "A tagged OSM point is not proof that a stop currently operates.",
+    "This count does not establish which routes serve a stop or whether boarding is permitted.",
+    "The extract uses a provisional bounding box and may omit points beyond it.",
+    "The ATU district polygons are referential census boundaries, not official territorial limits."
+  ]
+}

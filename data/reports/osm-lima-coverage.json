@@ -1,0 +1,20 @@
+{
+  "status": "incomplete",
+  "source": "OpenStreetMap via Overpass API",
+  "retrieved_at_utc": "2026-10-17T22:07:02.499263+00:00",
+  "bbox_south_west_north_east": "-12.35,-77.2,-11.7,-76.65",
+  "bbox_status": "provisional; confirm the metropolitan boundary before claiming full Lima coverage",
+  "counts": {},
+  "failures": [
+    {
+      "category": "bus_route_relations",
+      "error": "No se pudo consultar Overpass. https://overpass-api.de/api/interpreter: The read operation timed out | https://overpass.kumi.systems/api/interpreter: HTTP Error 500: Internal Server Error | https://overpass.private.coffee/api/interpreter: HTTP Error 500: Internal Server Error"
+    }
+  ],
+  "limitations": [
+    "Element counts do not establish route completeness or data freshness.",
+    "Overlapping OSM tagging can make stop categories overlap; do not sum them as unique stops.",
+    "Route geometry, ordered stops, names, fares, and source dates require a separate quality review.",
+    "The bbox may include places outside metropolitan Lima and may omit edge areas."
+  ]
+}
