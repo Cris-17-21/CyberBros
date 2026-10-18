@@ -27,9 +27,13 @@ service cloud.firestore {
       match /trips/{tripId} {
         allow read, delete: if isOwner(uid);
         allow create, update: if isOwner(uid)
+          && request.resource.data.keys().hasOnly(
+            ['status', 'spentCents', 'replanCount', 'createdAt', 'dataVersion', 'snapshot'])
           && request.resource.data.spentCents is int
           && request.resource.data.spentCents >= 0
-          && request.resource.data.status in ['ACTIVE', 'COMPLETED', 'ABANDONED'];
+          && request.resource.data.status in ['PLANNED', 'ACTIVE', 'COMPLETED', 'ABANDONED']
+          && request.resource.data.snapshot is string
+          && request.resource.data.snapshot.size() < 20000;
       }
 
       // Incremento B (push FCM).
@@ -54,6 +58,44 @@ service cloud.firestore {
         && request.resource.data.source == resource.data.source
         && step('activeDays') && step('trips') && step('replans') && step('completed');
       allow delete: if false;
+    }
+
+    // Taxi compartido para el tramo puente. Solo cuentas con sesión. Guarda
+    // paraderos (puntos públicos), nunca la ubicación de las personas.
+    // Limitación declarada: el cupo lo controla el cliente.
+    match /taxi_pools/{poolId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(
+          ['ownerUid', 'ownerName', 'fromLabel', 'toLabel', 'fromLat', 'fromLng',
+           'toLat', 'toLng', 'distanceMetres', 'taxiCents', 'maxPeople', 'status',
+           'createdAt', 'expiresAt'])
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.status == 'OPEN'
+        && request.resource.data.maxPeople in [2, 3, 4]
+        && request.resource.data.taxiCents is int
+        && request.resource.data.taxiCents > 0
+        && request.resource.data.taxiCents <= 20000
+        && request.resource.data.ownerName.size() <= 30
+        && request.resource.data.fromLabel.size() <= 120
+        && request.resource.data.toLabel.size() <= 120
+        && request.resource.data.expiresAt > request.time
+        && request.resource.data.expiresAt < request.time + duration.value(45, 'm');
+      // Solo la dueña cierra la sala; no puede cambiar nada más.
+      allow update: if signedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status in ['OPEN', 'CLOSED'];
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+
+      // Cada persona solo crea o borra su propio lugar en la sala.
+      match /members/{uid} {
+        allow read: if signedIn();
+        allow create, update: if isOwner(uid)
+          && request.resource.data.keys().hasOnly(['name', 'joinedAt'])
+          && request.resource.data.name.size() <= 30;
+        allow delete: if isOwner(uid);
+      }
     }
 
     // Reportes de tarifa o paradero incorrectos (RF-14): solo creación.
