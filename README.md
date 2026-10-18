@@ -4,6 +4,8 @@
 Compara transporte público, caminata y tramos de taxi corto *únicamente donde conviene*, calculando con exactitud matemática qué ganas y qué sacrificas en cada alternativa.
 
 > Proyecto presentado en **Hack the Andes 2026** · Track *Movilidad y Transporte* · Reto: **Transporte público en Lima, rutas y tiempos**.
+> 
+> 📦 **Descarga directa de APK (Android):** [**Descargar Rutéalo APK (Google Drive)**](https://drive.google.com/file/d/1PNwmu7K5jSkCmNdfdg6BpK97lBzZYoUI/view?usp=sharing)
 
 ---
 
@@ -108,6 +110,8 @@ flutter run -d <id_dispositivo>       # Versión Android
 flutter build web --release           # Genera SPA en build/web
 flutter build apk --release           # Genera APK en build/app/outputs/flutter-apk/
 ```
+
+> 📲 **Descarga directa:** Puedes instalar el APK compilado directamente sin necesidad de compilarlo en local desde [**Google Drive (Rutéalo APK)**](https://drive.google.com/file/d/1PNwmu7K5jSkCmNdfdg6BpK97lBzZYoUI/view?usp=sharing).
 
 ### 2. Probar la versión Web en local
 
