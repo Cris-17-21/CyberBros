@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../auth/data/auth_service.dart';
 import '../domain/routing_engine.dart';
+import 'cloud_trip_store.dart';
 import 'osm_stops.dart';
 import 'pilot_planner.dart';
 
@@ -232,44 +235,148 @@ final class GuestTripSnapshot {
       );
 }
 
-/// Guest-only local history. Storage failures keep the current visit usable.
+/// Historial de viajes. Sin sesión es local (invitado, 30 días). Con sesión
+/// se guarda además en Firestore (`CloudTripStore`) y se lee de allí, así que
+/// el mismo historial aparece en todos los dispositivos de la cuenta.
+///
+/// Cada identidad tiene su propia copia local: al cerrar sesión el historial
+/// de la cuenta deja de verse en ese dispositivo. Los fallos de almacenamiento
+/// o de red no interrumpen el uso.
 final class GuestHistoryRepository {
   GuestHistoryRepository._();
 
   static final GuestHistoryRepository instance = GuestHistoryRepository._();
-  static const _key = 'cyberon.guest.history.v1';
+  static const _guestKey = 'cyberon.guest.history.v1';
   final SharedPreferencesAsync _storage = SharedPreferencesAsync();
   List<GuestTripSnapshot> _trips = [];
   bool _loaded = false;
+  bool _identityKnown = false;
+  String? _identity;
+  bool _guestMigrationPending = false;
   bool storageAvailable = true;
 
-  Future<List<GuestTripSnapshot>> list() async {
-    if (!_loaded) {
-      _loaded = true;
-      try {
-        final raw = await _storage.getString(_key);
-        if (raw != null) {
-          final payload = jsonDecode(raw) as Map<String, dynamic>;
-          if (payload['schema_version'] == 1) {
-            for (final item in payload['trips'] as List<dynamic>) {
-              try {
-                _trips.add(
-                  GuestTripSnapshot.fromJson(item as Map<String, dynamic>),
-                );
-              } on FormatException {
-                // Keep the other local snapshots if one entry is damaged.
-              } on TypeError {
-                // Keep the other local snapshots if one entry is damaged.
-              }
+  /// Viajes borrados por el usuario cuyo borrado en la nube aún no se confirmó.
+  /// Se ocultan siempre y se reintentan, para que no reaparezcan.
+  final Set<String> _deleted = {};
+
+  /// Motivo si el último borrado no llegó a la nube (para avisar al usuario).
+  String? deleteWarning;
+
+  /// `true` cuando el historial se está sincronizando con la cuenta.
+  bool get cloudSync => AuthService.instance.isSignedIn;
+
+  String get _key {
+    final uid = _identity;
+    return uid == null ? _guestKey : 'cyberon.user.$uid.history.v1';
+  }
+
+  String get _deletedKey => '$_key.deleted';
+
+  Future<void> _loadDeleted() async {
+    _deleted.clear();
+    try {
+      final raw = await _storage.getString(_deletedKey);
+      if (raw != null) {
+        _deleted.addAll((jsonDecode(raw) as List<dynamic>).cast<String>());
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _saveDeleted() async {
+    try {
+      await _storage.setString(_deletedKey, jsonEncode(_deleted.toList()));
+    } catch (_) {}
+  }
+
+  /// Reintenta los borrados pendientes en la nube.
+  Future<void> _flushDeleted() async {
+    for (final id in _deleted.toList()) {
+      if (await CloudTripStore.instance.delete(id)) _deleted.remove(id);
+    }
+    await _saveDeleted();
+  }
+
+  /// Detecta un cambio de identidad (inicio o cierre de sesión) y reinicia la
+  /// copia en memoria. Al iniciar sesión sube los viajes de invitado.
+  Future<void> _syncIdentity() async {
+    final uid = AuthService.instance.session?.userId;
+    if (_identityKnown && uid == _identity) return;
+    final wasGuest = !_identityKnown || _identity == null;
+    _identityKnown = true;
+    _identity = uid;
+    _loaded = false;
+    _trips = [];
+    if (uid != null && wasGuest) {
+      _guestMigrationPending = true;
+      unawaited(CloudTripStore.instance.ensureProfile());
+    }
+  }
+
+  Future<List<GuestTripSnapshot>> _readLocal(String key) async {
+    final result = <GuestTripSnapshot>[];
+    try {
+      final raw = await _storage.getString(key);
+      if (raw != null) {
+        final payload = jsonDecode(raw) as Map<String, dynamic>;
+        if (payload['schema_version'] == 1) {
+          for (final item in payload['trips'] as List<dynamic>) {
+            try {
+              result.add(
+                GuestTripSnapshot.fromJson(item as Map<String, dynamic>),
+              );
+            } on FormatException {
+              // Keep the other local snapshots if one entry is damaged.
+            } on TypeError {
+              // Keep the other local snapshots if one entry is damaged.
             }
           }
         }
-      } catch (_) {
-        storageAvailable = false;
       }
+      storageAvailable = true;
+    } catch (_) {
+      storageAvailable = false;
     }
-    final cutoff = DateTime.now().toUtc().subtract(const Duration(days: 30));
-    _trips.removeWhere((trip) => trip.createdAtUtc.isBefore(cutoff));
+    return result;
+  }
+
+  /// Sube a la cuenta los viajes hechos como invitado en este dispositivo.
+  Future<void> _migrateGuestTrips() async {
+    if (!_guestMigrationPending) return;
+    final guestTrips = await _readLocal(_guestKey);
+    var allUploaded = true;
+    for (final trip in guestTrips) {
+      if (!await CloudTripStore.instance.save(trip)) allUploaded = false;
+    }
+    if (allUploaded) {
+      _guestMigrationPending = false;
+      try {
+        await _storage.remove(_guestKey);
+      } catch (_) {}
+    }
+  }
+
+  Future<List<GuestTripSnapshot>> list() async {
+    await _syncIdentity();
+    if (!_loaded) {
+      _loaded = true;
+      _trips = await _readLocal(_key);
+      await _loadDeleted();
+    }
+    if (cloudSync) {
+      await _migrateGuestTrips();
+      if (_deleted.isNotEmpty) await _flushDeleted();
+      final remote = await CloudTripStore.instance.list();
+      final byId = {for (final trip in _trips) trip.id: trip};
+      for (final trip in remote) {
+        byId[trip.id] = trip; // la nube manda ante un mismo viaje
+      }
+      _trips = byId.values
+          .where((trip) => !_deleted.contains(trip.id))
+          .toList();
+    } else {
+      final cutoff = DateTime.now().toUtc().subtract(const Duration(days: 30));
+      _trips.removeWhere((trip) => trip.createdAtUtc.isBefore(cutoff));
+    }
     _trips.sort((a, b) => b.createdAtUtc.compareTo(a.createdAtUtc));
     return List.unmodifiable(_trips);
   }
@@ -279,13 +386,26 @@ final class GuestHistoryRepository {
     _trips.removeWhere((existing) => existing.id == trip.id);
     _trips.insert(0, trip);
     if (_trips.length > 100) _trips = _trips.take(100).toList();
-    return _persist();
+    final local = await _persist();
+    if (!cloudSync) return local;
+    final remote = await CloudTripStore.instance.save(trip);
+    return local || remote;
   }
 
   Future<bool> delete(String id) async {
     await list();
+    deleteWarning = null;
     _trips.removeWhere((trip) => trip.id == id);
-    return _persist();
+    final local = await _persist();
+    if (!cloudSync) return local;
+    final remote = await CloudTripStore.instance.delete(id);
+    if (!remote) {
+      _deleted.add(id);
+      await _saveDeleted();
+      deleteWarning =
+          'No se pudo borrar en la nube (${CloudTripStore.instance.lastError ?? 'error'}). Se ocultó aquí y lo reintentaremos.';
+    }
+    return local || remote;
   }
 
   Future<bool> _persist() async {

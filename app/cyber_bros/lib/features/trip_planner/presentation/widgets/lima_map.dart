@@ -123,7 +123,7 @@ class LimaMap extends StatelessWidget {
                     Polyline(
                       points: leg.points ?? [leg.from, leg.to],
                       color: switch (leg.kind) {
-                        JourneyLegKind.walk => Palette.inkMuted,
+                        JourneyLegKind.walk => Palette.walk,
                         JourneyLegKind.bus => Palette.primaryDark,
                         JourneyLegKind.taxi => Palette.taxi,
                       },

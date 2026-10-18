@@ -125,6 +125,41 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  /// Cambia el nombre para mostrar de la cuenta.
+  Future<void> updateDisplayName(String name) async {
+    final token = await validIdToken();
+    final current = _session;
+    if (token == null || current == null) {
+      throw const AuthException('Tu sesión venció. Inicia sesión de nuevo.');
+    }
+    final clean = name.trim();
+    await _post('$_identityBase/accounts:update', {
+      'idToken': token,
+      'displayName': clean,
+      'returnSecureToken': false,
+    });
+    final updated = current.copyWith(displayName: clean);
+    _session = updated;
+    await _persist(updated);
+    notifyListeners();
+  }
+
+  /// Token de identidad vigente para llamar a Firestore, o `null` si no hay
+  /// sesión o no se pudo renovar (sin red, sesión revocada).
+  Future<String?> validIdToken() async {
+    var current = _session;
+    if (current == null) return null;
+    if (current.isExpired) {
+      try {
+        current = await _refresh(current);
+        _session = current;
+      } catch (_) {
+        return null;
+      }
+    }
+    return current.idToken;
+  }
+
   Future<void> signOut() async {
     await _forget();
     _session = null;

@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import '../../../core/notifications/notification_service.dart';
 import '../../../core/theme/palette.dart';
 import '../data/osm_stops.dart';
 import '../data/guest_history.dart';
@@ -47,6 +50,13 @@ class _PilotOptionsScreenState extends State<PilotOptionsScreen> {
       pilot: pilot,
     );
     final saved = await GuestHistoryRepository.instance.save(trip);
+    // Si no inicia el viaje, se lo recordamos a los 15 minutos.
+    unawaited(
+      NotificationService.instance.schedulePlannedReminder(
+        tripId: trip.id,
+        destination: widget.destination.displayName,
+      ),
+    );
     if (!mounted) return;
     setState(() => _savingSelection = false);
     if (!saved) {
@@ -640,8 +650,8 @@ class _PilotDetailScreenState extends State<_PilotDetailScreen> {
                           children: [
                             CircleAvatar(
                               radius: 18,
-                              backgroundColor: Colors.white,
-                              child: Icon(step.icon, color: Palette.primaryDark, size: 20),
+                              backgroundColor: _stepBackground(step.icon),
+                              child: Icon(step.icon, color: _stepColor(step.icon), size: 20),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -725,6 +735,18 @@ List<JourneyMapLeg> _journeyLegs(
     }
   }
   return legs;
+}
+
+Color _stepColor(IconData icon) {
+  if (icon == Icons.directions_walk_rounded) return Palette.walk;
+  if (icon == Icons.local_taxi_rounded) return Palette.taxi;
+  return Palette.primaryDark;
+}
+
+Color _stepBackground(IconData icon) {
+  if (icon == Icons.directions_walk_rounded) return Palette.walkBg;
+  if (icon == Icons.local_taxi_rounded) return Palette.taxiBg;
+  return Colors.white;
 }
 
 final class _JourneyStep {

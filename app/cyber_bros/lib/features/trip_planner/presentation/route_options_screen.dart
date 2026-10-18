@@ -474,6 +474,7 @@ class _RouteOptionCard extends StatelessWidget {
                   _LegChip(
                     text: data.firstLeg,
                     icon: Icons.directions_walk_rounded,
+                    green: true,
                   ),
                   const Icon(
                     Icons.arrow_forward_rounded,
@@ -496,6 +497,7 @@ class _RouteOptionCard extends StatelessWidget {
                         ? Icons.local_taxi_rounded
                         : Icons.directions_walk_rounded,
                     red: data.lastLeg.contains('Taxi'),
+                    green: !data.lastLeg.contains('Taxi'),
                   ),
                 ],
               ),
@@ -542,7 +544,11 @@ class _Metric extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      Icon(icon, size: 16, color: Palette.inkMuted),
+      Icon(
+        icon,
+        size: 16,
+        color: icon == Icons.directions_walk_rounded ? Palette.walk : Palette.inkMuted,
+      ),
       const SizedBox(width: 4),
       Text(label, style: const TextStyle(fontSize: 12, color: Palette.ink)),
     ],
@@ -555,11 +561,13 @@ class _LegChip extends StatelessWidget {
     required this.icon,
     this.blue = false,
     this.red = false,
+    this.green = false,
   });
   final String text;
   final IconData icon;
   final bool blue;
   final bool red;
+  final bool green;
 
   @override
   Widget build(BuildContext context) {
@@ -567,11 +575,15 @@ class _LegChip extends StatelessWidget {
         ? const Color(0xFFD8E7FF)
         : red
         ? const Color(0xFFFCE0D9)
+        : green
+        ? Palette.walkBg
         : Palette.surfaceAlt;
     final fg = blue
         ? Palette.primaryDark
         : red
         ? Palette.taxi
+        : green
+        ? Palette.walk
         : Palette.inkMuted;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),

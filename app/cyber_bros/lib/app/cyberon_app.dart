@@ -5,12 +5,16 @@ import '../features/auth/data/auth_service.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/trip_planner/presentation/planner_home_screen.dart';
 
+/// Navegador global: permite abrir pantallas al tocar una notificación.
+final cyberonNavigatorKey = GlobalKey<NavigatorState>();
+
 class CyberonApp extends StatelessWidget {
   const CyberonApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: cyberonNavigatorKey,
       title: 'Cyberon',
       debugShowCheckedModeBanner: false,
       theme: buildCyberonTheme(),

@@ -6,6 +6,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../core/notifications/notification_service.dart';
 import '../../../core/theme/palette.dart';
 import '../data/guest_history.dart';
 import 'planner_home_screen.dart';
@@ -52,6 +53,51 @@ class _TripFollowScreenState extends State<TripFollowScreen> {
     _setupStageNavigation();
     if (_trip.status == GuestTripStatus.active) {
       _startGpsTracking();
+      _notifyTripStarted();
+    }
+  }
+
+  // ------------------------------------------------------- notificaciones
+
+  String _instructionFor(int stage) {
+    final stages = _stages;
+    if (stages.isEmpty) return 'Sigue la ruta indicada';
+    final leg = stages[stage.clamp(0, stages.length - 1)];
+    return '${_label(leg)} hasta ${leg.to}';
+  }
+
+  void _notifyTripStarted() {
+    unawaited(
+      NotificationService.instance.tripStarted(
+        tripId: _trip.id,
+        destination: _trip.destinationLabel,
+        stages: _stages.length,
+        instruction: _instructionFor(_stage),
+      ),
+    );
+  }
+
+  void _notifyStatus(GuestTripStatus status) {
+    final service = NotificationService.instance;
+    switch (status) {
+      case GuestTripStatus.active:
+        _notifyTripStarted();
+      case GuestTripStatus.completed:
+        unawaited(
+          service.arrived(
+            tripId: _trip.id,
+            destination: _trip.destinationLabel,
+          ),
+        );
+      case GuestTripStatus.abandoned:
+        unawaited(
+          service.tripAbandoned(
+            tripId: _trip.id,
+            destination: _trip.destinationLabel,
+          ),
+        );
+      case GuestTripStatus.planned:
+        break;
     }
   }
 
@@ -198,6 +244,13 @@ class _TripFollowScreenState extends State<TripFollowScreen> {
         newPoint,
         target,
       );
+      // Aviso de cercanía antes de llegar al final del tramo.
+      if (distanceToEnd > 25 && distanceToEnd <= 120 && _stages.isNotEmpty) {
+        final leg = _stages[_stage.clamp(0, _stages.length - 1)];
+        unawaited(
+          NotificationService.instance.nearStop(stage: _stage, place: leg.to),
+        );
+      }
       if (distanceToEnd <= 25) {
         if (_stage + 1 < _stages.length) {
           _nextStep();
@@ -254,6 +307,14 @@ class _TripFollowScreenState extends State<TripFollowScreen> {
         _stage++;
       });
       _setupStageNavigation();
+      unawaited(
+        NotificationService.instance.stageChanged(
+          destination: _trip.destinationLabel,
+          stage: _stage,
+          stages: _stages.length,
+          instruction: _instructionFor(_stage),
+        ),
+      );
     } else {
       _saveStatus(GuestTripStatus.completed);
     }
@@ -269,6 +330,7 @@ class _TripFollowScreenState extends State<TripFollowScreen> {
       _trip = updated;
       _busy = false;
     });
+    _notifyStatus(status);
     if (!persisted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

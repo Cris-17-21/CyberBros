@@ -68,6 +68,71 @@ ThemeData buildCyberonTheme() {
         ),
       ),
     ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(52),
+        foregroundColor: Palette.primary,
+        side: const BorderSide(color: Palette.border, width: 1.5),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: Palette.primary,
+        textStyle: const TextStyle(fontWeight: FontWeight.w700),
+      ),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: Palette.ink,
+      contentTextStyle: const TextStyle(color: Colors.white, fontSize: 14),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: Palette.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      titleTextStyle: const TextStyle(
+        color: Palette.ink,
+        fontSize: 19,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.3,
+      ),
+    ),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: Palette.surface,
+      surfaceTintColor: Colors.transparent,
+      showDragHandle: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: Palette.surface,
+      side: const BorderSide(color: Palette.border),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      labelStyle: const TextStyle(
+        color: Palette.ink,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+    dividerTheme: const DividerThemeData(color: Palette.border, space: 1),
+    progressIndicatorTheme: const ProgressIndicatorThemeData(
+      color: Palette.primary,
+    ),
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith(
+        (states) =>
+            states.contains(WidgetState.selected) ? Colors.white : Palette.inkMuted,
+      ),
+      trackColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.selected)
+            ? Palette.primary
+            : Palette.surfaceAlt,
+      ),
+    ),
     cardTheme: CardThemeData(
       color: Palette.surface,
       elevation: 1,

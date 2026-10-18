@@ -21,6 +21,8 @@ abstract final class Palette {
   static const accentCyan = Color(0xFF06B6D4);
 
   // Semantics & Transport Indicators
+  static const walk = Color(0xFF16A34A);
+  static const walkBg = Color(0xFFDCFCE7);
   static const taxi = Color(0xFFEA580C);
   static const taxiBg = Color(0xFFFFF7ED);
   static const confirmed = Color(0xFF10B981);

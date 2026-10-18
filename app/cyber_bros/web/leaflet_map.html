@@ -174,7 +174,7 @@
         try {
           const legs = JSON.parse(journeyRaw);
           const bounds = [];
-          const colors = { walk: '#59677b', bus: '#06345e', taxi: '#b8452e' };
+          const colors = { walk: '#16a34a', bus: '#06345e', taxi: '#b8452e' };
           if (!Array.isArray(legs) || legs.length > 300) throw new Error('Trayecto inválido');
           for (const leg of legs) {
             let points = [];
