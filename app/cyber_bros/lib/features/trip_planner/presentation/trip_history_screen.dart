@@ -45,9 +45,10 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
                 const Text(
                   'Historial de este dispositivo',
                   style: TextStyle(
-                    fontFamily: 'Georgia',
                     fontSize: 23,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w900,
+                    color: Palette.ink,
+                    letterSpacing: -0.6,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -233,9 +234,10 @@ class _TripHistoryDetailScreenState extends State<_TripHistoryDetailScreen> {
             Text(
               '${_trip.originLabel} → ${_trip.destinationLabel}',
               style: const TextStyle(
-                fontFamily: 'Georgia',
                 fontSize: 22,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w800,
+                color: Palette.ink,
+                letterSpacing: -0.5,
               ),
             ),
             const SizedBox(height: 8),

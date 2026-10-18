@@ -142,13 +142,13 @@ class RouteOptionsScreen extends StatelessWidget {
         ),
         title: const Text(
           'Opciones',
-          style: TextStyle(fontFamily: 'Georgia', fontWeight: FontWeight.w700),
+          style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: -0.4),
         ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: CircleAvatar(
-              backgroundColor: Palette.primaryDark,
+              backgroundColor: Palette.primary,
               child: IconButton(
                 tooltip: 'Cuenta',
                 onPressed: () {},
@@ -178,10 +178,11 @@ class RouteOptionsScreen extends StatelessWidget {
                             children: [
                               Text(
                                 '${availableRoutes.length} ${availableRoutes.length == 1 ? 'opción' : 'opciones'} de ejemplo',
-                                style: TextStyle(
-                                  fontFamily: 'Georgia',
+                                style: const TextStyle(
                                   fontSize: 23,
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: FontWeight.w900,
+                                  color: Palette.ink,
+                                  letterSpacing: -0.6,
                                 ),
                               ),
                               const SizedBox(height: 3),
@@ -274,10 +275,12 @@ class RouteOptionsScreen extends StatelessWidget {
                         'Elegir esta opción (S/ ${selectedFare.toStringAsFixed(2)})',
                       ),
                       style: FilledButton.styleFrom(
-                        minimumSize: const Size.fromHeight(58),
-                        backgroundColor: Palette.primaryDark,
+                        minimumSize: const Size.fromHeight(54),
+                        backgroundColor: Palette.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                         textStyle: const TextStyle(
-                          fontFamily: 'Georgia',
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                         ),
@@ -436,10 +439,10 @@ class _RouteOptionCard extends StatelessWidget {
                   Text(
                     'S/ ${data.price.toStringAsFixed(2)}',
                     style: const TextStyle(
-                      fontFamily: 'Georgia',
-                      fontSize: 25,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
                       color: Palette.ink,
+                      letterSpacing: -0.8,
                     ),
                   ),
                   const Spacer(),

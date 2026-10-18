@@ -385,12 +385,16 @@ class _TripFollowScreenState extends State<TripFollowScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
-                        color: Palette.primaryDark,
-                        borderRadius: BorderRadius.circular(18),
+                        gradient: const LinearGradient(
+                          colors: [Palette.primaryDark, Palette.primary],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.16),
-                            blurRadius: 16,
+                            color: Palette.primary.withValues(alpha: 0.28),
+                            blurRadius: 18,
                             offset: const Offset(0, 4),
                           ),
                         ],
@@ -554,11 +558,13 @@ class _TripFollowScreenState extends State<TripFollowScreen> {
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                         ),
                         style: FilledButton.styleFrom(
-                          backgroundColor: Palette.primaryDark,
+                          backgroundColor: Palette.primary,
+                          elevation: 3,
+                          shadowColor: Palette.primary.withValues(alpha: 0.35),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          minimumSize: const Size.fromHeight(48),
+                          minimumSize: const Size.fromHeight(52),
                         ),
                       ),
                       const SizedBox(height: 6),

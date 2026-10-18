@@ -170,19 +170,19 @@ class LimaMap extends StatelessWidget {
                 markers: [
                   Marker(
                     point: navigationPoint!,
-                    width: 44,
-                    height: 44,
+                    width: 46,
+                    height: 46,
                     child: Transform.rotate(
                       angle: navigationBearing,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Palette.primaryDark,
+                          color: Palette.primary,
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 3),
                           boxShadow: [
                             BoxShadow(
-                              color: Palette.primaryDark.withValues(alpha: 0.45),
-                              blurRadius: 10,
+                              color: Palette.primary.withValues(alpha: 0.5),
+                              blurRadius: 14,
                               spreadRadius: 2,
                             ),
                           ],
@@ -190,7 +190,7 @@ class LimaMap extends StatelessWidget {
                         child: const Icon(
                           Icons.navigation_rounded,
                           color: Colors.white,
-                          size: 24,
+                          size: 26,
                         ),
                       ),
                     ),
@@ -282,9 +282,30 @@ Marker _mapMarker({
 }) {
   return Marker(
     point: point,
-    width: 42,
+    width: 44,
     height: 48,
     alignment: Alignment.topCenter,
-    child: Icon(icon, color: color, size: 36),
+    child: Stack(
+      alignment: Alignment.center,
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 2.5),
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: 0.45),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Icon(icon, color: Colors.white, size: 20),
+        ),
+      ],
+    ),
   );
 }

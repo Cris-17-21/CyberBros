@@ -11,6 +11,9 @@ final class MapboxRoadService {
   // In-memory cache to avoid duplicate network roundtrips for the same segment
   static final _cache = <String, List<LatLng>>{};
 
+  // Shared HTTP client with connection pooling and keep-alive
+  static final _httpClient = HttpClient()..connectionTimeout = const Duration(seconds: 4);
+
   /// Returns a detailed polyline following actual street geometry between [origin] and [destination].
   /// [mode] can be 'walking' or 'driving'.
   static Future<List<LatLng>> getRoadRoute({
@@ -32,8 +35,7 @@ final class MapboxRoadService {
         '?geometries=geojson&overview=full&access_token=$_token';
 
     try {
-      final client = HttpClient();
-      final request = await client.getUrl(Uri.parse(url));
+      final request = await _httpClient.getUrl(Uri.parse(url));
       final response = await request.close();
       if (response.statusCode != 200) {
         return [origin, destination];
@@ -86,8 +88,7 @@ final class MapboxRoadService {
         '?types=address,poi,neighborhood,locality&language=es&access_token=$_token';
 
     try {
-      final client = HttpClient();
-      final request = await client.getUrl(Uri.parse(url));
+      final request = await _httpClient.getUrl(Uri.parse(url));
       final response = await request.close();
       if (response.statusCode == 200) {
         final body = await response.transform(utf8.decoder).join();

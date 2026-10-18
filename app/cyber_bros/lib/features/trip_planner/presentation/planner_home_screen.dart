@@ -362,9 +362,9 @@ class _PlannerHomeScreenState extends State<PlannerHomeScreen> {
                           '¿A dónde vamos hoy?',
                           style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             color: Palette.ink,
-                            fontFamily: 'Georgia',
-                            fontWeight: FontWeight.w800,
-                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.6,
+                            fontSize: 21,
                           ),
                         ),
                         if (_locatingGPS)
@@ -377,10 +377,11 @@ class _PlannerHomeScreenState extends State<PlannerHomeScreen> {
                     ),
                     const SizedBox(height: 12),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Palette.surfaceAlt.withValues(alpha: 0.4),
-                        borderRadius: BorderRadius.circular(16),
+                        color: Palette.surfaceAlt,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Palette.border),
                       ),
                       child: Column(
                         children: [
@@ -478,8 +479,10 @@ class _PlannerHomeScreenState extends State<PlannerHomeScreen> {
                     FilledButton(
                       onPressed: canContinue ? _openConditions : null,
                       style: FilledButton.styleFrom(
-                        minimumSize: const Size.fromHeight(50),
-                        backgroundColor: Palette.primaryDark,
+                        minimumSize: const Size.fromHeight(52),
+                        backgroundColor: Palette.primary,
+                        elevation: 3,
+                        shadowColor: Palette.primary.withValues(alpha: 0.35),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -552,10 +555,18 @@ class _PlaceInput extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
       decoration: BoxDecoration(
-        color: Palette.background,
-        borderRadius: BorderRadius.circular(14),
+        color: Palette.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Palette.border),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x060F172A),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -563,9 +574,9 @@ class _PlaceInput extends StatelessWidget {
             onTap: onIconTap,
             borderRadius: BorderRadius.circular(21),
             child: CircleAvatar(
-              radius: 21,
+              radius: 19,
               backgroundColor: accent,
-              child: Icon(icon, color: Palette.primaryDark),
+              child: Icon(icon, color: Palette.primary, size: 20),
             ),
           ),
           const SizedBox(width: 10),

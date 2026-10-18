@@ -42,7 +42,7 @@ class RouteDetailScreen extends StatelessWidget {
         ),
         title: const Text(
           'Recorrido de ejemplo',
-          style: TextStyle(fontFamily: 'Georgia', fontWeight: FontWeight.w700),
+          style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: -0.4),
         ),
         actions: [
           Padding(
@@ -219,10 +219,10 @@ class _CostSummary extends StatelessWidget {
           Text(
             'Gastarás ~S/ ${fare.toStringAsFixed(2)}',
             style: const TextStyle(
-              fontFamily: 'Georgia',
-              fontWeight: FontWeight.w700,
-              fontSize: 26,
+              fontWeight: FontWeight.w900,
+              fontSize: 27,
               color: Palette.ink,
+              letterSpacing: -0.8,
             ),
           ),
           const SizedBox(height: 4),
@@ -327,9 +327,10 @@ class _ItineraryCard extends StatelessWidget {
                 child: Text(
                   'Hoja de ruta',
                   style: TextStyle(
-                    fontFamily: 'Georgia',
                     fontSize: 20,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
+                    color: Palette.ink,
+                    letterSpacing: -0.4,
                   ),
                 ),
               ),

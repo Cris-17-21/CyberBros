@@ -140,7 +140,7 @@ class _TripConditionsScreenState extends State<TripConditionsScreen> {
         ),
         title: const Text(
           'Tus Condiciones',
-          style: TextStyle(fontFamily: 'Georgia', fontWeight: FontWeight.w700),
+          style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: -0.4),
         ),
         actions: [
           IconButton(
@@ -213,9 +213,9 @@ class _TripConditionsScreenState extends State<TripConditionsScreen> {
                       const Text(
                         'S/  ',
                         style: TextStyle(
-                          fontFamily: 'Georgia',
                           fontSize: 21,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w800,
+                          color: Palette.inkMuted,
                         ),
                       ),
                       SizedBox(
@@ -227,10 +227,10 @@ class _TripConditionsScreenState extends State<TripConditionsScreen> {
                             decimal: true,
                           ),
                           style: const TextStyle(
-                            fontFamily: 'Georgia',
-                            fontSize: 27,
-                            fontWeight: FontWeight.w800,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
                             color: Palette.ink,
+                            letterSpacing: -0.8,
                           ),
                           decoration: const InputDecoration(
                             border: InputBorder.none,
@@ -285,9 +285,9 @@ class _TripConditionsScreenState extends State<TripConditionsScreen> {
                       Text(
                         '${_walkingLimit.round()} m ≈ ${(_walkingLimit / 100).round()} cuadras',
                         style: const TextStyle(
-                          fontFamily: 'Georgia',
                           fontWeight: FontWeight.w800,
-                          color: Palette.primaryDark,
+                          color: Palette.primary,
+                          letterSpacing: -0.3,
                         ),
                       ),
                     ],
@@ -462,10 +462,10 @@ class _ConditionCard extends StatelessWidget {
                   child: Text(
                     title,
                     style: const TextStyle(
-                      fontFamily: 'Georgia',
                       fontSize: 17,
                       fontWeight: FontWeight.w800,
                       color: Palette.ink,
+                      letterSpacing: -0.4,
                     ),
                   ),
                 ),

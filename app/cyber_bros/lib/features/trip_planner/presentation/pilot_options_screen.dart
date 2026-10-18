@@ -106,11 +106,12 @@ class _PilotOptionsScreenState extends State<PilotOptionsScreen> {
                 padding: const EdgeInsets.all(16),
                 children: [
                   Text(
-                    '${alternatives.length} ${alternatives.length == 1 ? 'opción' : 'opciones'} del piloto',
+                    '${alternatives.length} ${alternatives.length == 1 ? 'opción' : 'opciones'} disponibles',
                     style: const TextStyle(
-                      fontFamily: 'Georgia',
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
+                      color: Palette.ink,
+                      fontSize: 23,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.6,
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -134,30 +135,39 @@ class _PilotOptionsScreenState extends State<PilotOptionsScreen> {
                         onTap: _savingSelection
                             ? null
                             : () => _select(alternative, pilot),
+                        borderRadius: BorderRadius.circular(20),
                         child: Padding(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(18),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 alternative.label.toUpperCase(),
                                 style: const TextStyle(
-                                  color: Palette.primaryDark,
-                                  fontWeight: FontWeight.w700,
+                                  color: Palette.primary,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 12,
+                                  letterSpacing: 0.5,
                                 ),
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 6),
                               Text(
                                 'S/ ${(alternative.costCents / 100).toStringAsFixed(2)}',
                                 style: const TextStyle(
-                                  fontFamily: 'Georgia',
-                                  fontSize: 27,
-                                  fontWeight: FontWeight.w700,
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w900,
+                                  color: Palette.ink,
+                                  letterSpacing: -0.8,
                                 ),
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 6),
                               Text(
                                 '${alternative.walkMetres} m a pie · ~${alternative.durationMinutes} min · ${alternative.transfers} transbordos',
+                                style: const TextStyle(
+                                  color: Palette.inkMuted,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 13,
+                                ),
                               ),
                               if (alternative.edges.any(
                                 (edge) => edge.kind == EdgeKind.taxiBridge,
@@ -434,10 +444,10 @@ class _PilotDetailScreenState extends State<_PilotDetailScreen> {
                             Text(
                               'S/ ${(widget.alternative.costCents / 100).toStringAsFixed(2)}',
                               style: const TextStyle(
-                                fontFamily: 'Georgia',
-                                fontSize: 24,
-                                fontWeight: FontWeight.w800,
+                                fontSize: 26,
+                                fontWeight: FontWeight.w900,
                                 color: Palette.ink,
+                                letterSpacing: -0.8,
                               ),
                             ),
                             Text(
