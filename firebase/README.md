@@ -25,7 +25,7 @@ solo la clave de API web.
 5. Publica las reglas e índices desde esta carpeta:
    ```powershell
    cd firebase
-   firebase deploy --only firestore --project cyberon-lima
+   firebase deploy --only firestore,hosting --project cyberon-lima
    ```
 6. Ejecuta la app con la clave:
    ```powershell

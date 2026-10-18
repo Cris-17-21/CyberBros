@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import '../../../core/notifications/notification_service.dart';
 import '../../../core/theme/palette.dart';
 import '../data/osm_stops.dart';
@@ -532,7 +533,7 @@ class _PilotDetailScreenState extends State<_PilotDetailScreen> {
           Positioned(
             top: 14,
             left: 14,
-            child: Container(
+            child: PointerInterceptor(child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.95),
@@ -554,7 +555,7 @@ class _PilotDetailScreenState extends State<_PilotDetailScreen> {
                   _LegDot(color: Palette.taxi, label: 'Taxi'),
                 ],
               ),
-            ),
+            )),
           ),
 
           // 3. Panel deslizable hacia arriba / abajo (DraggableScrollableSheet)
@@ -565,7 +566,7 @@ class _PilotDetailScreenState extends State<_PilotDetailScreen> {
             snap: true,
             snapSizes: const [0.16, 0.40, 0.88],
             builder: (context, scrollController) {
-              return Container(
+              return PointerInterceptor(child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
@@ -773,7 +774,7 @@ class _PilotDetailScreenState extends State<_PilotDetailScreen> {
                       ),
                   ],
                 ),
-              );
+              ));
             },
           ),
         ],

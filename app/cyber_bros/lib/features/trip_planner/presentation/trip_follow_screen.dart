@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
@@ -444,7 +445,7 @@ class _TripFollowScreenState extends State<TripFollowScreen> {
 
             // 2. Cabecera superior flotante estilo Google Maps con la indicación del tramo actual
             SafeArea(
-              child: Padding(
+              child: PointerInterceptor(child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Row(
                   children: [
@@ -524,7 +525,7 @@ class _TripFollowScreenState extends State<TripFollowScreen> {
                   ),
                 ],
               ),
-            ),
+            )),
           ),
 
           // 3. Hoja inferior flotante con el estado y avance de etapa
@@ -532,7 +533,7 @@ class _TripFollowScreenState extends State<TripFollowScreen> {
             alignment: Alignment.bottomCenter,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 600),
-              child: Container(
+              child: PointerInterceptor(child: Container(
                 margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
@@ -663,7 +664,7 @@ class _TripFollowScreenState extends State<TripFollowScreen> {
                     ],
                   ],
                 ),
-              ),
+              )),
             ),
           ),
         ],

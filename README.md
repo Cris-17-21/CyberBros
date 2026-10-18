@@ -1,4 +1,4 @@
-# Cyberon
+﻿# Cyberon
 
 **Planificador de viajes por Lima que respeta tu presupuesto y cuánto puedes caminar.**
 Compara transporte público, caminata y un taxi corto *solo en el tramo donde conviene*, y te dice
@@ -6,6 +6,8 @@ con cifras exactas qué ganas y qué sacrificas en cada opción.
 
 Hack the Andes 2026 · Track *Movilidad y Transporte* · Problema: **transporte público en Lima,
 rutas y tiempos**.
+
+**Demo en vivo:** https://cyberon-lima.web.app (funciona sin cuenta, en ventana privada; usa «Explorar sin cuenta»).
 
 ## El problema y para quién
 

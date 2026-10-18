@@ -10,7 +10,9 @@ import '../domain/context_advisor.dart';
 /// devuelve `null` y la app sigue sin la sugerencia de clima.
 class WeatherService {
   WeatherService({ResilientClient? client, DateTime Function()? now})
-    : _client = client ?? ResilientClient.shared,
+    // Open-Meteo puede tardar varios segundos desde algunas redes; como la
+    // sugerencia de clima no bloquea nada, se le da más tiempo que al resto.
+    : _client = client ?? ResilientClient(timeout: const Duration(seconds: 9)),
       _now = now ?? DateTime.now;
 
   static final WeatherService shared = WeatherService();

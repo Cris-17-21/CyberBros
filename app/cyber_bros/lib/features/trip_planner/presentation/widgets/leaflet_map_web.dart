@@ -63,6 +63,9 @@ class _LeafletMapViewState extends State<_LeafletMapView> {
   @override
   void dispose() {
     web.window.removeEventListener('message', _listener);
+    try {
+      web.window.localStorage.removeItem('cyberon_journey_$_token');
+    } catch (_) {}
     super.dispose();
   }
 
@@ -94,47 +97,73 @@ class _LeafletMapViewState extends State<_LeafletMapView> {
     }
   }
 
+  String? _writtenJourney;
+
+  /// El recorrido (con la geometría por calle) puede pesar decenas de KB, más
+  /// de lo que aceptan los servidores en una URL. Se deja en `localStorage`
+  /// (el iframe es del mismo origen) y la URL lleva solo una marca. Si el
+  /// almacenamiento está bloqueado, se pasa en la URL como último recurso.
+  String? _journeyParam() {
+    if (widget.journeyLegs.isEmpty) return null;
+    final json = jsonEncode([
+      for (final leg in widget.journeyLegs)
+        {
+          'from': [leg.from.latitude, leg.from.longitude],
+          'to': [leg.to.latitude, leg.to.longitude],
+          'kind': leg.kind.name,
+          if (leg.points != null && leg.points!.isNotEmpty)
+            'points': [
+              for (final p in leg.points!) [p.latitude, p.longitude],
+            ],
+        },
+    ]);
+    try {
+      if (json != _writtenJourney) {
+        web.window.localStorage.setItem('cyberon_journey_$_token', json);
+        _writtenJourney = json;
+      }
+      return 'ls:${json.hashCode}';
+    } catch (_) {
+      return json;
+    }
+  }
+
   @override
-  Widget build(BuildContext context) => HtmlElementView.fromTagName(
-    tagName: 'iframe',
-    onElementCreated: (Object element) {
-      final frame = element as web.HTMLIFrameElement;
-      frame
-        ..src = Uri(
-          path: 'leaflet_map.html',
-          queryParameters: {
-            'token': _token,
-            if (MapboxConfig.token != 'MAPBOX_TOKEN_PLACEHOLDER')
-              'mapboxToken': MapboxConfig.token,
-            if (widget.showDemoRoute) 'demo': '1',
-            'route': ?widget.routeId,
-            'stopLat': ?widget.selectedStop?.point.latitude.toString(),
-            'stopLon': ?widget.selectedStop?.point.longitude.toString(),
-            'stopName': ?widget.selectedStop?.displayName,
-            'originLat': ?widget.originPoint?.latitude.toString(),
-            'originLon': ?widget.originPoint?.longitude.toString(),
-            'destinationLat': ?widget.destinationPoint?.latitude.toString(),
-            'destinationLon': ?widget.destinationPoint?.longitude.toString(),
-            if (widget.journeyLegs.isNotEmpty)
-              'journey': jsonEncode([
-                for (final leg in widget.journeyLegs)
-                  {
-                    'from': [leg.from.latitude, leg.from.longitude],
-                    'to': [leg.to.latitude, leg.to.longitude],
-                    'kind': leg.kind.name,
-                    if (leg.points != null && leg.points!.isNotEmpty)
-                      'points': [
-                        for (final p in leg.points!) [p.latitude, p.longitude]
-                      ],
-                  },
-              ]),
-          },
-        ).toString()
-        ..title = 'Mapa de Lima basado en OpenStreetMap'
-        ..setAttribute('loading', 'lazy')
-        ..style.width = '100%'
-        ..style.height = '100%'
-        ..style.border = '0';
-    },
-  );
+  Widget build(BuildContext context) {
+    final src = Uri(
+      path: 'leaflet_map.html',
+      queryParameters: {
+        'token': _token,
+        if (MapboxConfig.token != 'MAPBOX_TOKEN_PLACEHOLDER')
+          'mapboxToken': MapboxConfig.token,
+        if (widget.showDemoRoute) 'demo': '1',
+        'route': ?widget.routeId,
+        'stopLat': ?widget.selectedStop?.point.latitude.toString(),
+        'stopLon': ?widget.selectedStop?.point.longitude.toString(),
+        'stopName': ?widget.selectedStop?.displayName,
+        'originLat': ?widget.originPoint?.latitude.toString(),
+        'originLon': ?widget.originPoint?.longitude.toString(),
+        'destinationLat': ?widget.destinationPoint?.latitude.toString(),
+        'destinationLon': ?widget.destinationPoint?.longitude.toString(),
+        'journey': ?_journeyParam(),
+      },
+    ).toString();
+    // La clave incluye todos los datos: si cambian el origen, el destino o el
+    // recorrido, el iframe se recrea y el mapa se actualiza (un iframe ya
+    // creado no vuelve a leer su URL).
+    return HtmlElementView.fromTagName(
+      key: ValueKey(src),
+      tagName: 'iframe',
+      onElementCreated: (Object element) {
+        final frame = element as web.HTMLIFrameElement;
+        frame
+          ..src = src
+          ..title = 'Mapa de Lima basado en OpenStreetMap'
+          ..setAttribute('loading', 'lazy')
+          ..style.width = '100%'
+          ..style.height = '100%'
+          ..style.border = '0';
+      },
+    );
+  }
 }

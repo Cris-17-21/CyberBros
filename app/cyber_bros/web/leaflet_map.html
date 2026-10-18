@@ -169,7 +169,16 @@
       } else if (destinationPoint && !params.has('journey')) {
         map.setView(destinationPoint, 15);
       }
-      const journeyRaw = params.get('journey');
+      // El recorrido puede ser muy largo (geometría por calle): la app lo deja en
+      // localStorage (mismo origen) y pasa solo una marca 'ls:<id>' en la URL.
+      let journeyRaw = params.get('journey');
+      if (journeyRaw && journeyRaw.startsWith('ls:')) {
+        try {
+          journeyRaw = window.localStorage.getItem('cyberon_journey_' + token) || '';
+        } catch (_) {
+          journeyRaw = '';
+        }
+      }
       if (journeyRaw) {
         try {
           const legs = JSON.parse(journeyRaw);

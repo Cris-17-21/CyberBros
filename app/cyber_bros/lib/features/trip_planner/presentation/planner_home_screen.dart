@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 import '../../../core/theme/palette.dart';
 import '../../../core/widgets/cyberon_brand.dart';
@@ -359,6 +360,198 @@ class _PlannerHomeScreenState extends State<PlannerHomeScreen> {
 
   // ---------------------------------------------------------------- build
 
+  /// Mapa con el que se fijan origen y destino tocando.
+  Widget _map() => LimaMap(
+    height: double.infinity,
+    borderRadius: 0,
+    mapController: _mapController,
+    originPoint: _originStop?.point,
+    destinationPoint: _destinationStop?.point,
+    onTap: (point) {
+      // Si falta origen, fija el origen; si no, el destino.
+      if (_originStop == null) {
+        _chooseStop(OsmStop.mapPoint(point), origin: true);
+      } else {
+        _chooseStop(OsmStop.mapPoint(point), origin: false);
+      }
+    },
+  );
+
+  /// Botones y etiqueta que flotan sobre el mapa. Van dentro de un
+  /// PointerInterceptor para que, en web, sus clics no atraviesen al iframe.
+  Widget _mapOverlays() => Stack(
+    children: [
+      Positioned(
+        top: 16,
+        right: 16,
+        child: PointerInterceptor(
+          child: Column(
+            children: [
+              _MapButton(
+                icon: Icons.fullscreen_rounded,
+                tooltip: 'Ver mapa completo',
+                onPressed: _openMap,
+              ),
+              const SizedBox(height: 10),
+              _MapButton(
+                icon: _locatingGPS
+                    ? Icons.sync_rounded
+                    : Icons.my_location_rounded,
+                tooltip: 'Usar mi ubicación',
+                onPressed: _locateDirectly,
+              ),
+            ],
+          ),
+        ),
+      ),
+      if (_isDemo)
+        Positioned(
+          top: 16,
+          left: 16,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(
+              color: Palette.ink.withValues(alpha: 0.85),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.auto_awesome_rounded, size: 15, color: Colors.white),
+                SizedBox(width: 6),
+                Text(
+                  'Modo demostración',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+    ],
+  );
+
+  /// Botón principal "Ver rutas y precios" con su ayuda.
+  Widget _cta({required bool canContinue, required int? pointDistance}) =>
+      Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FilledButton.icon(
+            onPressed: canContinue ? _openConditions : null,
+            icon: const Icon(Icons.arrow_forward_rounded),
+            iconAlignment: IconAlignment.end,
+            label: const Text('Ver rutas y precios'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(54),
+              elevation: canContinue ? 3 : 0,
+              shadowColor: Palette.primary.withValues(alpha: 0.4),
+            ),
+          ),
+          if (!canContinue && pointDistance == null) ...[
+            const SizedBox(height: 8),
+            const Text(
+              'Elige tu origen y tu destino para continuar',
+              style: TextStyle(color: Palette.inkMuted, fontSize: 13),
+            ),
+          ],
+        ],
+      );
+
+  /// Contenido del formulario (sin el botón principal, que va fijo aparte).
+  List<Widget> _formChildren({
+    required int? pointDistance,
+    required bool tooClose,
+    required bool showHandle,
+  }) => [
+    if (showHandle) ...[
+      Center(
+        child: Container(
+          width: 42,
+          height: 5,
+          decoration: BoxDecoration(
+            color: Palette.border,
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ),
+      ),
+      const SizedBox(height: 14),
+    ],
+    const Text(
+      '¿A dónde vamos hoy?',
+      style: TextStyle(
+        color: Palette.ink,
+        fontWeight: FontWeight.w900,
+        letterSpacing: -0.7,
+        fontSize: 24,
+      ),
+    ),
+    const SizedBox(height: 2),
+    ListenableBuilder(
+      listenable: AuthService.instance,
+      builder: (context, _) {
+        final session = AuthService.instance.session;
+        return Text(
+          session == null
+              ? 'Compara rutas según tu presupuesto y cuánto quieres caminar.'
+              : 'Hola, ${session.label}. Compara rutas según tu presupuesto.',
+          style: const TextStyle(color: Palette.inkMuted, fontSize: 14),
+        );
+      },
+    ),
+    const SizedBox(height: 16),
+    _RouteCard(
+      originController: _originController,
+      destinationController: _destinationController,
+      originFocus: _originFocus,
+      destinationFocus: _destinationFocus,
+      onOriginChanged: (text) => _onQueryChanged(origin: true, text: text),
+      onDestinationChanged: (text) =>
+          _onQueryChanged(origin: false, text: text),
+      onClearOrigin: () => _clearField(origin: true),
+      onClearDestination: () => _clearField(origin: false),
+      onMapOrigin: () => _choosePointFromMap(origin: true),
+      onMapDestination: () => _choosePointFromMap(origin: false),
+      onSwap: _swapPoints,
+    ),
+    _suggestionsPanel(),
+    const SizedBox(height: 12),
+    SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _QuickChip(
+            icon: Icons.my_location_rounded,
+            label: 'Mi ubicación',
+            onTap: _locateDirectly,
+          ),
+          _QuickChip(
+            icon: Icons.touch_app_outlined,
+            label: 'Elegir en el mapa',
+            onTap: () => _choosePointFromMap(origin: _originStop == null),
+          ),
+          _QuickChip(
+            icon: Icons.auto_awesome_rounded,
+            label: 'Viaje de ejemplo',
+            onTap: _loadExample,
+          ),
+        ],
+      ),
+    ),
+    if (pointDistance != null) ...[
+      const SizedBox(height: 14),
+      _DistanceNote(
+        tooClose: tooClose,
+        text: tooClose
+            ? 'Están a solo $pointDistance m: puedes ir caminando.'
+            : 'Distancia en línea recta: ${_distanceLabel(pointDistance)}',
+      ),
+    ],
+  ];
+
+
   @override
   Widget build(BuildContext context) {
     final pointDistance = _originStop != null && _destinationStop != null
@@ -407,216 +600,144 @@ class _PlannerHomeScreenState extends State<PlannerHomeScreen> {
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: LimaMap(
-              height: double.infinity,
-              borderRadius: 0,
-              mapController: _mapController,
-              originPoint: _originStop?.point,
-              destinationPoint: _destinationStop?.point,
-              onTap: (point) {
-                // Si falta origen, fija el origen; si no, el destino.
-                if (_originStop == null) {
-                  _chooseStop(OsmStop.mapPoint(point), origin: true);
-                } else {
-                  _chooseStop(OsmStop.mapPoint(point), origin: false);
-                }
-              },
-            ),
-          ),
-          Positioned(
-            top: 16,
-            right: 16,
-            child: Column(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // En pantallas anchas (web de escritorio) el formulario va en un panel
+          // lateral y el mapa ocupa el resto: nada se superpone al mapa. En
+          // móvil se usa la hoja inferior arrastrable.
+          if (constraints.maxWidth >= 900) {
+            return Row(
               children: [
-                _MapButton(
-                  icon: Icons.fullscreen_rounded,
-                  tooltip: 'Ver mapa completo',
-                  onPressed: _openMap,
+                SizedBox(
+                  width: 440,
+                  child: Material(
+                    color: Palette.background,
+                    elevation: 6,
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: ListView(
+                            padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+                            children: _formChildren(
+                              pointDistance: pointDistance,
+                              tooClose: tooClose,
+                              showHandle: false,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.08),
+                                blurRadius: 12,
+                                offset: const Offset(0, -3),
+                              ),
+                            ],
+                          ),
+                          child: _cta(
+                            canContinue: canContinue,
+                            pointDistance: pointDistance,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 10),
-                _MapButton(
-                  icon: _locatingGPS
-                      ? Icons.sync_rounded
-                      : Icons.my_location_rounded,
-                  tooltip: 'Usar mi ubicación',
-                  onPressed: _locateDirectly,
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Positioned.fill(child: _map()),
+                      _mapOverlays(),
+                    ],
+                  ),
                 ),
               ],
-            ),
-          ),
-          if (_isDemo)
-            Positioned(
-              top: 16,
-              left: 16,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 7,
-                ),
-                decoration: BoxDecoration(
-                  color: Palette.ink.withValues(alpha: 0.85),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.auto_awesome_rounded, size: 15, color: Colors.white),
-                    SizedBox(width: 6),
-                    Text(
-                      'Modo demostración',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          DraggableScrollableSheet(
-            initialChildSize: 0.46,
-            minChildSize: 0.14,
-            maxChildSize: 0.92,
-            builder: (context, scrollController) {
-              return Container(
-                decoration: BoxDecoration(
-                  color: Palette.background,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(28),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.16),
-                      blurRadius: 24,
-                      offset: const Offset(0, -6),
-                    ),
-                  ],
-                ),
-                child: ListView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.fromLTRB(18, 10, 18, 24),
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 42,
-                        height: 5,
-                        decoration: BoxDecoration(
-                          color: Palette.border,
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    const Text(
-                      '¿A dónde vamos hoy?',
-                      style: TextStyle(
-                        color: Palette.ink,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.7,
-                        fontSize: 24,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    ListenableBuilder(
-                      listenable: AuthService.instance,
-                      builder: (context, _) {
-                        final session = AuthService.instance.session;
-                        return Text(
-                          session == null
-                              ? 'Compara rutas según tu presupuesto y cuánto quieres caminar.'
-                              : 'Hola, ${session.label}. Compara rutas según tu presupuesto.',
-                          style: const TextStyle(
-                            color: Palette.inkMuted,
-                            fontSize: 14,
+            );
+          }
+          return Stack(
+            children: [
+              Positioned.fill(child: _map()),
+              _mapOverlays(),
+              Positioned.fill(
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 640),
+                    child: DraggableScrollableSheet(
+                      initialChildSize: 0.5,
+                      minChildSize: 0.16,
+                      maxChildSize: 0.94,
+                      builder: (context, scrollController) {
+                        // PointerInterceptor: en web evita que los clics sobre la
+                        // hoja lleguen al mapa (iframe) que está debajo.
+                        return PointerInterceptor(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Palette.background,
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(28),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.16),
+                                  blurRadius: 24,
+                                  offset: const Offset(0, -6),
+                                ),
+                              ],
+                            ),
+                            child: ListView(
+                              controller: scrollController,
+                              // Espacio inferior para que el botón fijo no tape nada.
+                              padding: const EdgeInsets.fromLTRB(18, 10, 18, 120),
+                              children: _formChildren(
+                                pointDistance: pointDistance,
+                                tooClose: tooClose,
+                                showHandle: true,
+                              ),
+                            ),
                           ),
                         );
                       },
                     ),
-                    const SizedBox(height: 16),
-                    _RouteCard(
-                      originController: _originController,
-                      destinationController: _destinationController,
-                      originFocus: _originFocus,
-                      destinationFocus: _destinationFocus,
-                      onOriginChanged: (text) =>
-                          _onQueryChanged(origin: true, text: text),
-                      onDestinationChanged: (text) =>
-                          _onQueryChanged(origin: false, text: text),
-                      onClearOrigin: () => _clearField(origin: true),
-                      onClearDestination: () => _clearField(origin: false),
-                      onMapOrigin: () => _choosePointFromMap(origin: true),
-                      onMapDestination: () => _choosePointFromMap(origin: false),
-                      onSwap: _swapPoints,
-                    ),
-                    _suggestionsPanel(),
-                    const SizedBox(height: 12),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          _QuickChip(
-                            icon: Icons.my_location_rounded,
-                            label: 'Mi ubicación',
-                            onTap: _locateDirectly,
-                          ),
-                          _QuickChip(
-                            icon: Icons.touch_app_outlined,
-                            label: 'Elegir en el mapa',
-                            onTap: () => _choosePointFromMap(
-                              origin: _originStop == null,
+                  ),
+                ),
+              ),
+              // El botón principal siempre visible, fuera de la lista que se desplaza.
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 640),
+                    child: PointerInterceptor(
+                      child: Container(
+                        padding: const EdgeInsets.fromLTRB(18, 10, 18, 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 14,
+                              offset: const Offset(0, -4),
                             ),
-                          ),
-                          _QuickChip(
-                            icon: Icons.auto_awesome_rounded,
-                            label: 'Viaje de ejemplo',
-                            onTap: _loadExample,
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (pointDistance != null) ...[
-                      const SizedBox(height: 14),
-                      _DistanceNote(
-                        tooClose: tooClose,
-                        text: tooClose
-                            ? 'Están a solo $pointDistance m: puedes ir caminando.'
-                            : 'Distancia en línea recta: ${_distanceLabel(pointDistance)}',
-                      ),
-                    ],
-                    const SizedBox(height: 16),
-                    FilledButton.icon(
-                      onPressed: canContinue ? _openConditions : null,
-                      icon: const Icon(Icons.arrow_forward_rounded),
-                      iconAlignment: IconAlignment.end,
-                      label: const Text('Ver rutas y precios'),
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size.fromHeight(56),
-                        elevation: canContinue ? 3 : 0,
-                        shadowColor: Palette.primary.withValues(alpha: 0.4),
-                      ),
-                    ),
-                    if (!canContinue && pointDistance == null) ...[
-                      const SizedBox(height: 10),
-                      const Center(
-                        child: Text(
-                          'Elige tu origen y tu destino para continuar',
-                          style: TextStyle(
-                            color: Palette.inkMuted,
-                            fontSize: 13,
-                          ),
+                          ],
+                        ),
+                        child: _cta(
+                          canContinue: canContinue,
+                          pointDistance: pointDistance,
                         ),
                       ),
-                    ],
-                  ],
+                    ),
+                  ),
                 ),
-              );
-            },
-          ),
-        ],
+              ),
+            ],
+          );
+        },
       ),
       bottomNavigationBar: NavigationBar(
         backgroundColor: Colors.white,
