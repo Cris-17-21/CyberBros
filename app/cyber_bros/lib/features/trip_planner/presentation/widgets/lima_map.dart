@@ -27,6 +27,8 @@ class LimaMap extends StatelessWidget {
     this.destinationPoint,
     this.onTap,
     this.mapController,
+    this.navigationPoint,
+    this.navigationBearing = 0.0,
   });
 
   final bool showDemoRoute;
@@ -39,6 +41,8 @@ class LimaMap extends StatelessWidget {
   final LatLng? destinationPoint;
   final ValueChanged<LatLng>? onTap;
   final MapController? mapController;
+  final LatLng? navigationPoint;
+  final double navigationBearing;
 
   static const _origin = LatLng(-12.0678, -77.0365);
   static const _transfer = LatLng(-12.0781, -77.0418);
@@ -157,6 +161,39 @@ class LimaMap extends StatelessWidget {
                     point: journeyLegs.last.to,
                     color: Palette.taxi,
                     icon: Icons.flag_rounded,
+                  ),
+                ],
+              ),
+            // Flecha / indicador interactivo de navegación en tiempo real
+            if (navigationPoint != null)
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: navigationPoint!,
+                    width: 44,
+                    height: 44,
+                    child: Transform.rotate(
+                      angle: navigationBearing,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Palette.primaryDark,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 3),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Palette.primaryDark.withValues(alpha: 0.45),
+                              blurRadius: 10,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.navigation_rounded,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
