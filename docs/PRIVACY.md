@@ -11,6 +11,7 @@ ubicación** y puedes usarla sin cuenta.
 | Tus viajes: origen, destino, límites, recorrido elegido y estado | Tu dispositivo y, con cuenta, Firestore `users/{uid}/trips` | Tu historial y repetir un viaje | Solo tú |
 | Salas de taxi compartido: paraderos, tu primer nombre | Firestore `taxi_pools` | Repartir un taxi | Personas con cuenta que buscan el mismo tramo |
 | Preferencias de notificaciones | Tu dispositivo | Avisos del viaje | Solo tú |
+| Condiciones de siempre (presupuesto, caminata seguida y total, taxi puente, prioridad), **solo si pulsas "Guardar mis condiciones"** | Atomic Memory, vía `services/preferences_api` | Precompletar tu próximo viaje cuando pulsas "Usar estas" | Solo tú |
 
 ## Qué NO se guarda
 
@@ -28,6 +29,10 @@ inicias sesión, los viajes de invitado se suben a tu cuenta.
 ## Control
 
 * Puedes **borrar un viaje** cuando quieras: se elimina de tu cuenta y de todos tus dispositivos.
+* Puedes **olvidar tus condiciones de siempre** con "Olvidar" en "Tus Condiciones". La app solo dice
+  que se olvidaron cuando el servidor confirma que ya no están. Las condiciones guardadas no
+  incluyen tu ruta, tu ubicación, tu nombre ni tu correo; el servidor las asocia a tu cuenta con un
+  identificador derivado de tu `uid`.
 * Puedes **apagar las notificaciones** (todas o por tipo) en Mi perfil.
 * Puedes **cerrar sesión**; el historial de la cuenta deja de verse en ese dispositivo.
 

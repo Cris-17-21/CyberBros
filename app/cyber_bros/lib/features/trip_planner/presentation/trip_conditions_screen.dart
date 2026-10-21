@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../core/theme/palette.dart';
 import '../data/osm_stops.dart';
+import '../data/trip_memory_service.dart';
 import '../domain/condition_parser.dart';
 import '../domain/context_advisor.dart';
 import '../domain/routing_engine.dart';
@@ -12,6 +13,7 @@ import 'pilot_options_screen.dart';
 import 'route_options_screen.dart';
 import 'widgets/context_banner.dart';
 import 'widgets/natural_language_card.dart';
+import 'widgets/remembered_conditions_card.dart';
 
 class TripConditionsScreen extends StatefulWidget {
   const TripConditionsScreen({
@@ -22,6 +24,7 @@ class TripConditionsScreen extends StatefulWidget {
     this.originStop,
     this.destinationStop,
     this.initialLimits,
+    this.tripMemory,
   });
 
   final String origin;
@@ -30,6 +33,10 @@ class TripConditionsScreen extends StatefulWidget {
   final OsmStop? originStop;
   final OsmStop? destinationStop;
   final PlanLimits? initialLimits;
+
+  /// Condiciones recordadas (RF-26); por defecto la instancia global, que está
+  /// apagada salvo que se configure `TRIP_MEMORY_API_URL`.
+  final TripMemoryService? tripMemory;
 
   @override
   State<TripConditionsScreen> createState() => _TripConditionsScreenState();
@@ -55,13 +62,7 @@ class _TripConditionsScreenState extends State<TripConditionsScreen> {
         2000,
       );
       _allowTaxi = initial.allowTaxiBridge;
-      _priority = switch (initial.priority) {
-        PlanPriority.savings => 'Ahorro',
-        PlanPriority.lessWalking => 'Menos caminata',
-        PlanPriority.time => 'Tiempo',
-        PlanPriority.fewerTransfers => 'Menos transbordos',
-        PlanPriority.balanced => 'Menos caminata',
-      };
+      _priority = _priorityLabel(initial.priority);
     } else {
       // Calcular presupuesto sugerido inteligente según distancia entre puntos
       if (widget.originStop != null && widget.destinationStop != null) {
@@ -166,13 +167,59 @@ class _TripConditionsScreenState extends State<TripConditionsScreen> {
     );
   }
 
+  static String _priorityLabel(PlanPriority priority) => switch (priority) {
+    PlanPriority.savings => 'Ahorro',
+    PlanPriority.lessWalking => 'Menos caminata',
+    PlanPriority.time => 'Tiempo',
+    PlanPriority.fewerTransfers => 'Menos transbordos',
+    PlanPriority.balanced => 'Menos caminata',
+  };
+
+  PlanPriority get _priorityValue => switch (_priority) {
+    'Ahorro' => PlanPriority.savings,
+    'Menos caminata' => PlanPriority.lessWalking,
+    'Tiempo' => PlanPriority.time,
+    'Menos transbordos' => PlanPriority.fewerTransfers,
+    _ => PlanPriority.balanced,
+  };
+
   /// Límites actuales según los controles (para calcular sugerencias).
   PlanLimits _currentLimits() => PlanLimits(
     budgetCents: ((double.tryParse(_budgetController.text.replaceAll(',', '.')) ?? 8) * 100).round(),
     maxContinuousWalkMetres: _walkingLimit.round(),
     maxTotalWalkMetres: _totalWalkingLimit.round(),
     allowTaxiBridge: _allowTaxi,
+    priority: _priorityValue,
   );
+
+  /// Lo que se guardaría como condiciones de siempre, o `null` si el
+  /// presupuesto escrito no es válido.
+  PlanLimits? _limitsToRemember() {
+    final budget = double.tryParse(_budgetController.text.replaceAll(',', '.'));
+    if (budget == null || budget <= 0 || budget > 200) return null;
+    return PlanLimits(
+      budgetCents: (budget * 100).round(),
+      maxContinuousWalkMetres: _walkingLimit.round(),
+      maxTotalWalkMetres: _totalWalkingLimit.round(),
+      allowTaxiBridge: _allowTaxi,
+      priority: _priorityValue,
+    );
+  }
+
+  /// La persona eligió usar sus condiciones recordadas.
+  void _applyRemembered(PlanLimits limits) {
+    setState(() {
+      final soles = limits.budgetCents / 100;
+      _budgetController.text = soles.toStringAsFixed(soles % 1 == 0 ? 0 : 2);
+      _walkingLimit = limits.maxContinuousWalkMetres.toDouble().clamp(100, 800);
+      _totalWalkingLimit = limits.maxTotalWalkMetres.toDouble().clamp(
+        _walkingLimit,
+        2000,
+      );
+      _allowTaxi = limits.allowTaxiBridge;
+      _priority = _priorityLabel(limits.priority);
+    });
+  }
 
   /// La persona aceptó una sugerencia de clima u hora: se aplica a la caminata.
   void _applyContext(ContextSuggestion suggestion) {
@@ -201,13 +248,7 @@ class _TripConditionsScreenState extends State<TripConditionsScreen> {
       maxContinuousWalkMetres: _walkingLimit.round(),
       maxTotalWalkMetres: _totalWalkingLimit.round(),
       allowTaxiBridge: _allowTaxi,
-      priority: switch (_priority) {
-        'Ahorro' => PlanPriority.savings,
-        'Menos caminata' => PlanPriority.lessWalking,
-        'Tiempo' => PlanPriority.time,
-        'Menos transbordos' => PlanPriority.fewerTransfers,
-        _ => PlanPriority.balanced,
-      },
+      priority: _priorityValue,
     );
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -296,6 +337,11 @@ class _TripConditionsScreenState extends State<TripConditionsScreen> {
             ),
           ),
           const SizedBox(height: 14),
+          RememberedConditionsCard(
+            service: widget.tripMemory ?? TripMemoryService.instance,
+            currentLimits: _limitsToRemember,
+            onApply: _applyRemembered,
+          ),
           NaturalLanguageCard(onApply: _applyParsed),
           const SizedBox(height: 14),
           ContextBanner(
@@ -464,13 +510,16 @@ class _TripConditionsScreenState extends State<TripConditionsScreen> {
                     color: Palette.surfaceAlt,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Row(
+                  // Con letra grande o pantalla angosta, el valor pasa abajo
+                  // en lugar de desbordar.
+                  child: Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    spacing: 8,
                     children: [
                       const Text(
                         'Distancia estimada',
                         style: TextStyle(color: Palette.inkMuted),
                       ),
-                      const Spacer(),
                       Text(
                         '${_walkingLimit.round()} m ≈ ${(_walkingLimit / 100).round()} cuadras',
                         style: const TextStyle(

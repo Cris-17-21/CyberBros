@@ -133,6 +133,17 @@ node bot.js
 # Escanea el código QR generado en terminal para vincular la sesión
 ```
 
+### 4. Condiciones recordadas (opcional, RF-26)
+
+Con una cuenta, la persona puede guardar, usar, corregir y olvidar sus condiciones de viaje de siempre
+desde la tarjeta "Tus condiciones de siempre" de *Tus Condiciones*. Se guardan en
+[Atomic Memory](https://docs.atomicstrata.ai) a través de un backend ligero en Dart
+([`services/preferences_api`](services/preferences_api/README.md)), que verifica la cuenta y guarda la
+clave del servicio de memoria fuera de la app. El plan gratuito de Firebase no admite Cloud Functions
+(R8 en `cyberon-arquitectura.md`), y el bot de WhatsApp no expone HTTP: por eso es un servicio aparte,
+pequeño y apagado por defecto. Sin `--dart-define=TRIP_MEMORY_API_URL=…` la app se ve y funciona igual
+que siempre. Demo grabada con la app real: [`docs/media/condiciones-recordadas`](docs/media/condiciones-recordadas/README.md).
+
 ---
 
 ## Pruebas y Calidad de Código

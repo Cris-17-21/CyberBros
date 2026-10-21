@@ -19,4 +19,27 @@ abstract final class FirebaseConfig {
       _envApiKey.isNotEmpty ? _envApiKey : _defaultApiKey;
 
   static bool get isConfigured => apiKey.isNotEmpty;
+
+  /// Emuladores locales de Firebase (`firebase.json`), solo para desarrollo:
+  ///
+  ///   --dart-define=FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099
+  ///   --dart-define=FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
+  static const _authEmulatorHost = String.fromEnvironment(
+    'FIREBASE_AUTH_EMULATOR_HOST',
+  );
+  static const _firestoreEmulatorHost = String.fromEnvironment(
+    'FIRESTORE_EMULATOR_HOST',
+  );
+
+  static String get identityBase => _authEmulatorHost.isEmpty
+      ? 'https://identitytoolkit.googleapis.com/v1'
+      : 'http://$_authEmulatorHost/identitytoolkit.googleapis.com/v1';
+
+  static String get tokenUrl => _authEmulatorHost.isEmpty
+      ? 'https://securetoken.googleapis.com/v1/token'
+      : 'http://$_authEmulatorHost/securetoken.googleapis.com/v1/token';
+
+  static String get firestoreDocuments =>
+      '${_firestoreEmulatorHost.isEmpty ? 'https://firestore.googleapis.com' : 'http://$_firestoreEmulatorHost'}'
+      '/v1/projects/$projectId/databases/(default)/documents';
 }

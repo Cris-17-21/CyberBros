@@ -42,3 +42,27 @@ jobs:
             echo "Se encontró un posible secreto en el repositorio."; exit 1
           fi
           echo "Sin secretos evidentes."
+
+  # Backend opcional de condiciones recordadas (RF-26); usa un fixture local,
+  # nunca credenciales reales.
+  preferences_api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/preferences_api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Dependencias
+        run: dart pub get
+
+      - name: Análisis estático
+        run: dart analyze
+
+      - name: Pruebas
+        run: dart test
