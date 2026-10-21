@@ -121,9 +121,7 @@ final class SharedTaxiStore {
 
   static const _timeout = Duration(seconds: 12);
   static const _prefKey = 'cyberon.taxi.myroom';
-  static const _documents =
-      'https://firestore.googleapis.com/v1/projects/${FirebaseConfig.projectId}'
-      '/databases/(default)/documents';
+  static String get _documents => FirebaseConfig.firestoreDocuments;
 
   /// Radios para considerar que dos personas comparten el mismo tramo.
   static const matchFromMetres = 400;

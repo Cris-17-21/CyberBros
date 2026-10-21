@@ -19,9 +19,7 @@ final class CloudTripStore {
   static final CloudTripStore instance = CloudTripStore._();
 
   static const _timeout = Duration(seconds: 12);
-  static const _base =
-      'https://firestore.googleapis.com/v1/projects/${FirebaseConfig.projectId}'
-      '/databases/(default)/documents';
+  static String get _base => FirebaseConfig.firestoreDocuments;
 
   bool get available => AuthService.instance.isSignedIn;
 

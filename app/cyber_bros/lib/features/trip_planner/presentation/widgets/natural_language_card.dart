@@ -76,12 +76,14 @@ class _NaturalLanguageCardState extends State<NaturalLanguageCard> {
             children: [
               Icon(Icons.auto_awesome_rounded, color: Palette.primary, size: 20),
               SizedBox(width: 8),
-              Text(
-                'Cuéntalo con tus palabras',
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 16,
-                  color: Palette.primaryDark,
+              Expanded(
+                child: Text(
+                  'Cuéntalo con tus palabras',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                    color: Palette.primaryDark,
+                  ),
                 ),
               ),
             ],

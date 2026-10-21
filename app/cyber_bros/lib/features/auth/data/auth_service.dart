@@ -23,8 +23,8 @@ class AuthService extends ChangeNotifier {
   static const _maxFailedAttempts = 5;
   static const _lockout = Duration(seconds: 30);
 
-  static const _identityBase = 'https://identitytoolkit.googleapis.com/v1';
-  static const _tokenUrl = 'https://securetoken.googleapis.com/v1/token';
+  static String get _identityBase => FirebaseConfig.identityBase;
+  static String get _tokenUrl => FirebaseConfig.tokenUrl;
 
   AuthSession? _session;
   int _failedAttempts = 0;
